@@ -20,8 +20,7 @@ pub fn getMemoryInfo(boot: *uefi.tables.BootServices) Result {
     var mmap_key: usize = 0;
     var desc_size: usize = 0;
     var desc_version: u32 = 0;
-
-    var status = boot.getMemoryMap(&mmap_size, @ptrCast(&mmap), &mmap_key, &desc_size, &desc_version);
+    var status = boot.getMemoryMap(&mmap_size, mmap, &mmap_key, &desc_size, &desc_version);
     if(status != .BufferTooSmall) {
         log.putslnErr("getMemoryMap() didn't return BufferTooSmall, aborting");
         return Result{.err = status};
@@ -33,7 +32,7 @@ pub fn getMemoryInfo(boot: *uefi.tables.BootServices) Result {
         log.putslnErr("Failed to allocate memory map buffer.");
         return Result{.err = status};
     }
-    status = boot.getMemoryMap(&mmap_size, @ptrCast(&mmap), &mmap_key, &desc_size, &desc_version);
+    status = boot.getMemoryMap(&mmap_size, mmap, &mmap_key, &desc_size, &desc_version);
     if(status != .Success) {
         _ = boot.freePool(@ptrCast(mmap));
         log.putslnErr("Failed to getMemoryMap() with an initialized buffer.");
