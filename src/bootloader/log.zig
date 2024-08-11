@@ -42,6 +42,7 @@ fn writerCallback(_: void, out: []const u8) error{}!usize {
         if (codepoint < 0x10000) {
             if(dest_index >= 512) {
                 buffer[dest_index] = 0;
+                // ptrCast SAFETY: buffer of 513 elements to 512 + 0 sentinel
                 _ = uefi.system_table.con_out.?.outputString(@ptrCast(&buffer));
                 actual_dest_index += dest_index;
                 dest_index = 0;
@@ -54,6 +55,7 @@ fn writerCallback(_: void, out: []const u8) error{}!usize {
                 // we might pass a slice here with length 511 (thus still having one free usable slot). however
                 // we do not need to pass a subslice as uefi terminates once it encounters a null-terminator
                 // which is then set at index 511 instead of 512.
+                // ptrCast SAFETY: buffer of 513 elements to 512 + 0 sentinel (0 sentinel may already be at index 511)
                 _ = uefi.system_table.con_out.?.outputString(@ptrCast(&buffer));
                 actual_dest_index += dest_index;
                 dest_index = 0;
@@ -66,6 +68,7 @@ fn writerCallback(_: void, out: []const u8) error{}!usize {
     }
     if(dest_index != 0) {
         buffer[dest_index] = 0;
+        // ptrCast SAFETY: buffer of dest_index elements to 512 + 0 sentinel (although actual 0 sentinel already at dest_index)
         _ = uefi.system_table.con_out.?.outputString(@ptrCast(&buffer));
     }
     actual_dest_index += dest_index;

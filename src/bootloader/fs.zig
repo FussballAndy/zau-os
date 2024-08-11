@@ -15,6 +15,7 @@ const EFI_BY_HANDLE_PROTOCOL = constants.EFI_BY_HANDLE_PROTOCOL;
 pub fn getRootDir(boot: *uefi.tables.BootServices) Result {
     var guid align(8) = uefi.protocol.LoadedImage.guid;
     var image: ?*uefi.protocol.LoadedImage = null;
+    // ptrCast SAFETY: *?*LoadedImage -> *?*anyopaque
     var status = boot.openProtocol(uefi.handle, &guid, @ptrCast(&image), uefi.handle, null, EFI_BY_HANDLE_PROTOCOL);
     if(status != .Success) {
         log.putslnErr("Failed to open loaded image protocol!");
@@ -30,6 +31,7 @@ pub fn getRootDir(boot: *uefi.tables.BootServices) Result {
 
     var rootfs_raw: ?*uefi.protocol.SimpleFileSystem = null;
     guid = uefi.protocol.SimpleFileSystem.guid;
+    // ptrCast SAFETY: *?*SimpleFileSystem -> *?*anyopaque
     status = boot.openProtocol(root_device, &guid, @ptrCast(&rootfs_raw), uefi.handle, null, EFI_BY_HANDLE_PROTOCOL);
     if(status != .Success) {
         log.putslnErr("Failed to get root volume");

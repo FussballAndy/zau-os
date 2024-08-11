@@ -27,6 +27,7 @@ pub fn getMemoryInfo(boot: *uefi.tables.BootServices) Result {
     }
 
     const memory_map_capacity = mmap_size + 2 * desc_size;
+    // ptrCast SAFETY: *?[*]MemoryDescriptor -> *[*]u8 should we add align(8) to mmap?
     status = boot.allocatePool(uefi.tables.MemoryType.LoaderData, memory_map_capacity, @ptrCast(&mmap));
     if(status != .Success or mmap == null) {
         log.putslnErr("Failed to allocate memory map buffer.");
@@ -34,6 +35,7 @@ pub fn getMemoryInfo(boot: *uefi.tables.BootServices) Result {
     }
     status = boot.getMemoryMap(&mmap_size, mmap, &mmap_key, &desc_size, &desc_version);
     if(status != .Success) {
+        // ptrCast SAFETY: ?[*]MemoryDescriptor (guaranteed not null) -> [*]u8
         _ = boot.freePool(@ptrCast(mmap));
         log.putslnErr("Failed to getMemoryMap() with an initialized buffer.");
         return Result{.err = status};

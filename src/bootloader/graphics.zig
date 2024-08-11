@@ -15,6 +15,7 @@ const GOPWrapper = graphics.GOPWrapper;
 pub fn getGOP(boot: *BootServices) Result {
     var guid align(8) = GOP.guid;
     var gop_raw: ?*GOP = null;
+    // ptrCast SAFETY: *?*GOP -> *?*anyopaque
     const status = boot.locateProtocol(&guid, null, @ptrCast(&gop_raw));
     if(isError(status)) {
         log.putslnErr("Couldn't locate GOP.");
@@ -41,6 +42,7 @@ pub fn setupGOP(gop: *GOP) statusMod.UefiResult(GOPWrapper) {
 
 
     const wrapper = GOPWrapper{
+        // SAFETY: Mode.frame_buffer_base stores the base address of the framebuffer
         .framebuffer = @ptrFromInt(gop.mode.frame_buffer_base),
         .info = info.*,
     };

@@ -9,10 +9,9 @@ const KernelData = loaderMod.KernelData;
 
 const log = @import("./log.zig");
 
-const graphics = @import("shared").graphics;
-const GOPWrapper = graphics.GOPWrapper;
-
-const EntryType = *const fn([*]const loaderMod.Reserve, usize, GOPWrapper) callconv(.C) void;
+const sharedModule = @import("shared");
+const GOPWrapper = sharedModule.graphics.GOPWrapper;
+const EntryType = sharedModule.entry.EntryType;
 
 const memory = @import("./memory.zig");
 
@@ -24,6 +23,7 @@ fn exitBootServices(boot: *uefi.tables.BootServices) Status {
     const memory_info = memory_info_raw.ok;
     const status = boot.exitBootServices(uefi.handle, memory_info.map_key);
     if(status != .Success) {
+        // ptrCast SAFETY: [*]const MemoryDescriptor -> [*]MemoryDescriptor -> [*]u8
         _ = boot.freePool(@ptrCast(@constCast(memory_info.memory_map.ptr)));
     }
 
@@ -37,7 +37,7 @@ pub fn startKernel(boot: *uefi.tables.BootServices, data: *KernelData, gop_wrapp
         return status;
     }
 
-    const entry: EntryType = @ptrFromInt(data.kernel_image_entry);
+    const entry = data.kernel_image_entry;
     entry(reserves.ptr, reserves.len, gop_wrapper);
 
     while (true) {}

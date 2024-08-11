@@ -13,16 +13,13 @@ const Result = statusMod.UefiResult(KernelData);
 
 const log = @import("./log.zig");
 
-pub const Reserve = extern struct {
-    name: [*:0]const u8,
-    begin: usize,
-    end: usize,
-};
+pub const entryMod = @import("shared").entry;
+const Reserve = entryMod.Reserve;
 
 
 pub const KernelData = struct {
     kernel_image: *uefi.protocol.File,
-    kernel_image_entry: usize,
+    kernel_image_entry: entryMod.EntryType,
 
     reserves: std.ArrayList(Reserve),
 };
@@ -103,14 +100,18 @@ pub fn loadKernel(boot: *uefi.tables.BootServices, rootdir: *uefi.protocol.File)
         const reserve_start = phdr_addr + @intFromPtr(image_addr);
         const reserve_end = reserve_start + next.p_memsz;
 
-        reserves.append(Reserve{.name = "kernel", .begin = reserve_start,.end = reserve_end}) catch {
+        reserves.append(Reserve{.begin = reserve_start,.end = reserve_end}) catch {
             log.putslnErr("Failed to add a reserve");
             return Result{.err = .Aborted};
         };
     }
 
-    const kernel_image_entry = @intFromPtr(image_addr) + header.entry - image_start;
-    
+    // Note that here, just like in other places we subtract image_start which is because we load the parts of the
+    // kernel into memory at their respective location minus image_start to not waste memory before the first actual content.
+    // SAFETY: we calculate the entry point from the image address and the entry pointer in the header
+    const kernel_image_entry_raw = @intFromPtr(image_addr) + header.entry - image_start;
+    const kernel_image_entry: entryMod.EntryType = @ptrFromInt(kernel_image_entry_raw);
+
     return Result{.ok = KernelData{
         .kernel_image = kernel_image,
         .kernel_image_entry = kernel_image_entry,
