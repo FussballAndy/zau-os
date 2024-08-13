@@ -41,5 +41,5 @@ pub fn startKernel(boot: *uefi.tables.BootServices, data: *KernelData, gop_wrapp
     entry(reserves.ptr, reserves.len, gop_wrapper);
 
     while (true) {}
-    return EfiError.LoadError;
+    return Status.LoadError;
 }
