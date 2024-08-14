@@ -8,14 +8,45 @@ const Result = UefiResult(MemoryInfo);
 const log = @import("./log.zig");
 
 pub const MemoryInfo = struct {
-    memory_map: []const MemoryDescriptor,
+    memory_map: [*]const MemoryDescriptor,
+    memory_map_size: usize,
     map_key: usize,
     descriptor_size: usize,
     descriptor_version: u32,
+
+    const Self = @This();
+
+    pub fn memoryMapIterator(self: Self) MemoryMapIterator {
+        return MemoryMapIterator{
+            .base = self.memory_map,
+            .memory_map_size = self.memory_map_size,
+            .i = 0,
+            .descriptor_size = self.descriptor_size,
+        };
+    }
+};
+
+pub const MemoryMapIterator = struct {
+    base: [*]const MemoryDescriptor,
+    memory_map_size: usize,
+    i: usize,
+    descriptor_size: usize,
+
+    const Self = @This();
+
+    pub fn next(self: *Self) ?*MemoryDescriptor {
+        const index = self.i * self.descriptor_size;
+        if(index < self.memory_map_size) {
+            const address = @intFromPtr(self.base) + index;
+            self.i += 1;
+            return @ptrFromInt(address);
+        }
+        return null;
+    }
 };
 
 pub fn getMemoryInfo(boot: *uefi.tables.BootServices) Result {
-    var mmap: ?[*]uefi.tables.MemoryDescriptor = null;
+    var mmap: ?[*]MemoryDescriptor = null;
     var mmap_size: usize = 0;
     var mmap_key: usize = 0;
     var desc_size: usize = 0;
@@ -41,9 +72,9 @@ pub fn getMemoryInfo(boot: *uefi.tables.BootServices) Result {
         return Result{.err = status};
     }
 
-    const memory_map: []const MemoryDescriptor = mmap.?[0..mmap_size];
     return Result{.ok = MemoryInfo{
-        .memory_map = memory_map,
+        .memory_map = mmap.?,
+        .memory_map_size = mmap_size,
         .map_key = mmap_key,
         .descriptor_size = desc_size,
         .descriptor_version = desc_version,
