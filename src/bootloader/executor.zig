@@ -24,7 +24,7 @@ fn exitBootServices(boot: *uefi.tables.BootServices) Status {
     const status = boot.exitBootServices(uefi.handle, memory_info.map_key);
     if(status != .Success) {
         // ptrCast SAFETY: [*]const MemoryDescriptor -> [*]MemoryDescriptor -> [*]u8
-        _ = boot.freePool(@ptrCast(@constCast(memory_info.memory_map.ptr)));
+        _ = boot.freePool(@ptrCast(@constCast(memory_info.memory_map)));
     }
 
     return status;
