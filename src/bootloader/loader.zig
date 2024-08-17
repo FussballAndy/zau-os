@@ -14,14 +14,11 @@ const Result = statusMod.UefiResult(KernelData);
 const log = @import("./log.zig");
 
 pub const entryMod = @import("shared").entry;
-const Reserve = entryMod.Reserve;
 
 
 pub const KernelData = struct {
     kernel_image: *uefi.protocol.File,
     kernel_image_entry: entryMod.EntryType,
-
-    reserves: std.ArrayList(Reserve),
 };
 
 fn handlePHeaderError() Result {
@@ -83,8 +80,6 @@ pub fn loadKernel(boot: *uefi.tables.BootServices, rootdir: *uefi.protocol.File)
 
     @memset(image_addr[0..image_size], 0);
 
-    var reserves = std.ArrayList(Reserve).init(uefi.pool_allocator);
-
     ph_it = header.program_header_iterator(kernel_image);
 
     while (ph_it.next() catch return handlePHeaderError()) |next| {
@@ -96,14 +91,6 @@ pub fn loadKernel(boot: *uefi.tables.BootServices, rootdir: *uefi.protocol.File)
 
         kernel_image.seekableStream().seekTo(next.p_offset) catch return handleReaderError();
         _ = kernel_image.reader().read(phdr_slice) catch return handleReaderError();
-
-        const reserve_start = phdr_addr + @intFromPtr(image_addr);
-        const reserve_end = reserve_start + next.p_memsz;
-
-        reserves.append(Reserve{.begin = reserve_start,.end = reserve_end}) catch {
-            log.putslnErr("Failed to add a reserve");
-            return Result{.err = .Aborted};
-        };
     }
 
     // Note that here, just like in other places we subtract image_start which is because we load the parts of the
@@ -115,6 +102,5 @@ pub fn loadKernel(boot: *uefi.tables.BootServices, rootdir: *uefi.protocol.File)
     return Result{.ok = KernelData{
         .kernel_image = kernel_image,
         .kernel_image_entry = kernel_image_entry,
-        .reserves = reserves,
     }};
 }

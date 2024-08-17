@@ -8,6 +8,11 @@ const Result = UefiResult(MemoryInfo);
 const log = @import("./log.zig");
 
 pub const MemoryInfo = struct {
+    /// Note that this is less of an actual array as we use it in zig and rather just the pointer
+    /// to the base of the memory descriptors. Problem is that the descriptor size does not necessarily
+    /// match @sizeOf(MemoryDescriptor) and thus indexing memory_map would lead to undefined behavior.
+    /// Thus we simply store a base pointer and get the individual entries by indexing the manual way.
+    /// See also MemoryMapIterator
     memory_map: [*]const MemoryDescriptor,
     memory_map_size: usize,
     map_key: usize,
@@ -58,6 +63,7 @@ pub fn getMemoryInfo(boot: *uefi.tables.BootServices) Result {
     }
 
     const memory_map_capacity = mmap_size + 2 * desc_size;
+    mmap_size = memory_map_capacity;
     // ptrCast SAFETY: *?[*]MemoryDescriptor -> *[*]u8 should we add align(8) to mmap?
     status = boot.allocatePool(uefi.tables.MemoryType.LoaderData, memory_map_capacity, @ptrCast(&mmap));
     if(status != .Success or mmap == null) {

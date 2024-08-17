@@ -55,7 +55,7 @@ pub fn main() uefi.Status {
         return setup_result.err;
     }
     
-    const gop_wrapper = setup_result.ok;
+    var gop_wrapper = setup_result.ok;
     _ = log.putsln("Starting kernel. Have fun");
-    return exec.startKernel(boot, &kernel_data, gop_wrapper);
+    return exec.startKernel(boot, &kernel_data, &gop_wrapper);
 }
