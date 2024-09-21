@@ -9,53 +9,70 @@ const KernelData = loaderMod.KernelData;
 
 const log = @import("./log.zig");
 
+const memory = @import("./memory.zig");
+
+const virtual_memory = @import("./virtual_memory/index.zig");
+
+const MemoryInfo = @import("./memory_info.zig").MemoryInfo;
+
 const sharedModule = @import("shared");
+const MemoryRegions = sharedModule.memory.MemoryRegions;
 const GOPWrapper = sharedModule.graphics.GOPWrapper;
 const EntryType = sharedModule.entry.EntryType;
-
-const memory = @import("./memory.zig");
 
 fn exitBootServices(boot: *uefi.tables.BootServices, map_key: usize) Status {
     return boot.exitBootServices(uefi.handle, map_key);
 }
 
-fn getUsableMemoryAreas(raw_it: memory.MemoryMapIterator) ![]sharedModule.entry.MemoryRegion {
-    var it = raw_it;
-    var regions = std.ArrayList(sharedModule.entry.MemoryRegion).init(uefi.pool_allocator);
-    while (it.next()) |mem_desc| {
-        switch (mem_desc.type) {
-            .ConventionalMemory, .BootServicesCode, .BootServicesData => {
-                try regions.append(sharedModule.entry.MemoryRegion {
-                    .start = mem_desc.physical_start,
-                    .pages = mem_desc.number_of_pages,
-                });
-            },
-            else => {}
-        }
-    }
-    return regions.toOwnedSlice();
+fn mapToVirtualMemory(memory_info: *MemoryInfo, allocator: std.mem.Allocator, change_pointers: anytype) !virtual_memory.VirtualMapData {
+    const memory_regions = virtual_memory.buildVirtualMap(memory_info,allocator);
+    virtual_memory.updatePointers(memory_info, change_pointers);
+    return memory_regions;
 }
 
-pub fn startKernel(boot: *uefi.tables.BootServices, data: *KernelData, gop_wrapper: *GOPWrapper) Status {
-    const memory_info_raw = memory.getMemoryInfo(boot);
+
+pub fn startKernel(boot: *uefi.tables.BootServices, allocator: std.mem.Allocator, data: *KernelData, gop_wrapper: *GOPWrapper) Status {
+    const memory_info_raw = memory.getMemoryInfo(boot, allocator);
     if(memory_info_raw == .err) {
         memory_info_raw.printError();
         return memory_info_raw.err;
     }
-    const memory_info = memory_info_raw.ok;
+    var memory_info = memory_info_raw.ok;
 
+    var entry = data.kernel_image_entry;
 
-    const regions = getUsableMemoryAreas(memory_info.memoryMapIterator()) catch return Status.Aborted;
-    const status = exitBootServices(boot, memory_info.map_key);
+    var frame_buffer_address = gop_wrapper.framebuffer;
+    const pointers_to_change = .{&entry, &frame_buffer_address};
+    const vmap_data = mapToVirtualMemory(&memory_info, allocator, pointers_to_change) catch return Status.OutOfResources;
+
+    var status = exitBootServices(boot, memory_info.map_key);
     if(status != .Success) {
-        // ptrCast SAFETY: [*]const MemoryDescriptor -> [*]MemoryDescriptor -> [*]u8
-        _ = boot.freePool(@ptrCast(@constCast(memory_info.memory_map)));
+        log.putslnErr("Failed to exit boot services");
         return status;
     }
 
-    const entry = data.kernel_image_entry;
-    entry(regions.ptr, regions.len, gop_wrapper);
+    const vmap = vmap_data.virtual_map;
+    
+    status = uefi.system_table.runtime_services.setVirtualAddressMap(vmap.memory_map_size, vmap.descriptor_size, vmap.descriptor_version, vmap.memory_map);
+    
+    if(status != .Success) {
+        for(0..gop_wrapper.info.horizontal_resolution) |x| {
+            gop_wrapper.setPixel(x, 0, .{.green = 0,.blue = 0,.red = 255});
+        }
+        return status;
+    }
 
-    while (true) {}
+    for(0..gop_wrapper.info.vertical_resolution) |y| {
+        for(0..gop_wrapper.info.horizontal_resolution) |x| {
+            gop_wrapper.setPixel(x, y, .{.red = 0, .green = 255, .blue = 0});
+        }
+    }
+
+    for(0..gop_wrapper.info.horizontal_resolution) |x| {
+        gop_wrapper.setPixel(x, 0, .{.green = 0,.blue = 0,.red = 255});
+    }
+
+    entry(uefi.system_table, vmap_data.convetional_region, gop_wrapper);
+
     return Status.LoadError;
 }

@@ -1,5 +1,6 @@
 QEMU_EFI.fd
 QEMU_EFI-pflash.raw
-/vm/
+/vm/*
+!/vm/startup.nsh
 /.zig-cache/
 /zig-out/

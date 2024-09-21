@@ -10,15 +10,13 @@ pub const Color = extern struct {
 
 pub const GOPWrapper = extern struct {
     info: GOP.Mode.Info,
-    framebuffer: ?[*]u32,
+    framebuffer: [*]u32,
 
     const Self = @This();
 
     pub fn setPixel(self: *Self, x: usize, y: usize, pixel: Color) void {
-        if(self.framebuffer) |fb| {
-            const colorCode = applyFormatOnColor(self.info.pixel_format, pixel);
-            fb[self.info.pixels_per_scan_line * y + x] = colorCode;
-        }
+        const colorCode = applyFormatOnColor(self.info.pixel_format, pixel);
+        self.framebuffer[self.info.pixels_per_scan_line * y + x] = colorCode;
     }
 
     fn applyFormatOnColor(format: GOP.PixelFormat, pixel: Color) u32 {

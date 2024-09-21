@@ -1,8 +1,7 @@
-pub const MemoryRegion = extern struct {
-    start: usize,
-    pages: usize,
-};
+const memory = @import("./memory.zig");
+const uefi = @import("std").os.uefi;
+const SystemTable = uefi.tables.SystemTable;
 
 const GOPWrapper = @import("./graphics_wrapper.zig").GOPWrapper;
 
-pub const EntryType = *const fn([*]const MemoryRegion, usize, *GOPWrapper) callconv(.C) void;
+pub const EntryType = *const fn(*SystemTable, memory.MemoryRegions, *GOPWrapper) callconv(.C) void;

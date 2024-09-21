@@ -40,12 +40,18 @@ pub fn setupGOP(gop: *GOP) statusMod.UefiResult(GOPWrapper) {
     log.print("PixelFormat: {}\r\n", .{info.pixel_format});
     log.print("PixelsPerScanLine: {}\r\n", .{info.pixels_per_scan_line});
 
+    // SAFETY: Mode.frame_buffer_base stores the base address of the framebuffer
+    const framebuffer_address: ?[*]u32 = @ptrFromInt(gop.mode.frame_buffer_base);
+    if(framebuffer_address) |fb_address| {
+        const wrapper = GOPWrapper{
+            .framebuffer = fb_address,
+            .info = info.*,
+        };
 
-    const wrapper = GOPWrapper{
-        // SAFETY: Mode.frame_buffer_base stores the base address of the framebuffer
-        .framebuffer = @ptrFromInt(gop.mode.frame_buffer_base),
-        .info = info.*,
-    };
+        return .{.ok = wrapper};
+    } else {
+        return .{.err = .Unsupported};
+    }
 
-    return .{.ok = wrapper};
+
 }

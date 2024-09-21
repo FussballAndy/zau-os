@@ -1,15 +1,22 @@
 const sharedModule = @import("shared");
 const graphics = sharedModule.graphics;
 const entry = sharedModule.entry;
+const memory = sharedModule.memory;
 const GOPWrapper = graphics.GOPWrapper;
+const uefi = @import("std").os.uefi;
+const SystemTable = uefi.tables.SystemTable;
 
 
-export fn _start(regions_ptr: [*]const entry.MemoryRegion, regions_len: usize, gop_wrapper: *GOPWrapper) callconv(.C) void {
-    const regions = regions_ptr[0..regions_len];
-    _ = regions;
-    for(0..gop_wrapper.info.horizontal_resolution) |x| {
-        for(0..gop_wrapper.info.horizontal_resolution) |y| {
-            gop_wrapper.setPixel(x, y, .{.red = 255, .green = 255, .blue = 255});
+export fn _start(sys_table: *SystemTable, memory_regions: memory.MemoryRegions, gop_wrapper: *GOPWrapper) callconv(.C) void {
+    _ = sys_table;
+    _ = memory_regions;
+    paintScreen(gop_wrapper, .{.red = 255, .green = 255, .blue = 255});
+}
+
+fn paintScreen(gop_wrapper: *GOPWrapper, color: graphics.Color) void {
+    for(0..gop_wrapper.info.vertical_resolution) |y| {
+        for(0..gop_wrapper.info.horizontal_resolution) |x| {
+            gop_wrapper.setPixel(x, y, color);
         }
     }
 }

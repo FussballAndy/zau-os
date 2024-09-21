@@ -10,18 +10,37 @@ const exec = @import("./executor.zig");
 
 const graphics = @import("./graphics.zig");
 
+const GOPWrapper = @import("shared").graphics.GOPWrapper;
+
 pub fn main() uefi.Status {
-    const status = log.putsln("Loading file handles.");
+    var status = log.putsln("Welcome from the Bootloader!");
     if(status != .Success) {
         return status;
     }
 
     defer _ = log.putsln("\r\n"); // Padding
 
-    const boot = uefi.system_table.boot_services orelse {
+    const boot: *uefi.tables.BootServices = uefi.system_table.boot_services orelse {
         log.putslnErr("Failed to load boot services");
         return uefi.Status.Unsupported;
     };
+
+    const heap_size = 4 * 1024 * 1024; // 64 MB
+    const heap_pages = heap_size / 4096;
+    var heap: [*]align(4096) u8 = undefined;
+    status = boot.allocatePages(.AllocateAnyPages, uefi.tables.MemoryType.LoaderData, heap_pages, &heap);
+    if(status != .Success) {
+        log.putslnErr("Failed to allocate heap");
+        const tag_name = std.enums.tagName(uefi.Status, status);
+        log.print("Result: {?s}", .{tag_name});
+        return status;
+    }
+    defer _ = boot.freePages(heap, heap_pages);
+    const heap_slice = heap[0..heap_size];
+    var buffer_alloc = std.heap.FixedBufferAllocator.init(heap_slice);
+    const allocator = buffer_alloc.allocator();
+
+    _ = log.putsln("Loading file handles.");
 
     const rootdir_result = fs.getRootDir(boot);
     if(rootdir_result == .err) {
@@ -29,7 +48,6 @@ pub fn main() uefi.Status {
         return rootdir_result.err;
     }
     const rootdir = rootdir_result.ok;
-
 
     _ = log.putsln("Success.");
     _ = log.putsln("Loading kernel into memory.");
@@ -42,6 +60,7 @@ pub fn main() uefi.Status {
     var kernel_data = kernel_data_raw.ok;
 
     _ = log.putsln("Success.");
+    _ = log.putsln("Loading and setting up GOP.");
 
     const gop_raw = graphics.getGOP(boot);
     if(gop_raw == .err) {
@@ -54,8 +73,25 @@ pub fn main() uefi.Status {
         setup_result.printError();
         return setup_result.err;
     }
-    
     var gop_wrapper = setup_result.ok;
+
+    _ = log.putsln("Success.");
+    // _ = log.putsln("Opening serial protocol.");
+
+    // const serial_raw = serial.setupSerial(boot);
+    // if(serial_raw == .err) {
+    //     serial_raw.printError();
+    //     return serial_raw.err;
+    // }
+    // const serial_io = serial_raw.ok;
+
+    // _ = log.putsln("Success");
     _ = log.putsln("Starting kernel. Have fun");
-    return exec.startKernel(boot, &kernel_data, &gop_wrapper);
+
+    status = exec.startKernel(boot, allocator, &kernel_data, &gop_wrapper);
+
+    const tag_name = std.enums.tagName(uefi.Status, status);
+    log.print("Result: {?s}", .{tag_name});
+
+    return status;
 }
