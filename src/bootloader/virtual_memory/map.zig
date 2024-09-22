@@ -10,7 +10,7 @@ const MemoryRegions = shared.memory.MemoryRegions;
 
 pub const VirtualMapData = struct {
     virtual_map: MemoryInfo,
-    convetional_region: MemoryRegions
+    conventional_region: MemoryRegions
 };
 
 

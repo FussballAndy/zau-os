@@ -72,7 +72,7 @@ pub fn startKernel(boot: *uefi.tables.BootServices, allocator: std.mem.Allocator
         gop_wrapper.setPixel(x, 0, .{.green = 0,.blue = 0,.red = 255});
     }
 
-    entry(uefi.system_table, vmap_data.convetional_region, gop_wrapper);
+    entry(uefi.system_table, vmap_data.conventional_region, gop_wrapper);
 
     return Status.LoadError;
 }

@@ -76,16 +76,6 @@ pub fn main() uefi.Status {
     var gop_wrapper = setup_result.ok;
 
     _ = log.putsln("Success.");
-    // _ = log.putsln("Opening serial protocol.");
-
-    // const serial_raw = serial.setupSerial(boot);
-    // if(serial_raw == .err) {
-    //     serial_raw.printError();
-    //     return serial_raw.err;
-    // }
-    // const serial_io = serial_raw.ok;
-
-    // _ = log.putsln("Success");
     _ = log.putsln("Starting kernel. Have fun");
 
     status = exec.startKernel(boot, allocator, &kernel_data, &gop_wrapper);
