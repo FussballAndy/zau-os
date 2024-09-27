@@ -53,7 +53,7 @@ pub fn buildVirtualMap(memory_info: *MemoryInfo, alloc: Allocator) !VirtualMapDa
 
     return .{
         .virtual_map = virt_mem_info,
-        .convetional_region = MemoryRegions{
+        .conventional_region = MemoryRegions{
             .usable_memory_start = convential_start,
             .usable_memory_end = current_base,
         }
