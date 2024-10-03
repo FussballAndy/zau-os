@@ -3,9 +3,9 @@ const uefi = std.os.uefi;
 const GOP = uefi.protocol.GraphicsOutput;
 
 pub const Color = extern struct {
-    red: u8,
-    green: u8,
-    blue: u8
+    red: u8 = 0,
+    green: u8 = 0,
+    blue: u8 = 0
 };
 
 pub const GOPWrapper = extern struct {

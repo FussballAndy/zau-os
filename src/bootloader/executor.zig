@@ -57,19 +57,9 @@ pub fn startKernel(boot: *uefi.tables.BootServices, allocator: std.mem.Allocator
     
     if(status != .Success) {
         for(0..gop_wrapper.info.horizontal_resolution) |x| {
-            gop_wrapper.setPixel(x, 0, .{.green = 0,.blue = 0,.red = 255});
+            gop_wrapper.setPixel(x, 0, .{.red = 255});
         }
         return status;
-    }
-
-    for(0..gop_wrapper.info.vertical_resolution) |y| {
-        for(0..gop_wrapper.info.horizontal_resolution) |x| {
-            gop_wrapper.setPixel(x, y, .{.red = 0, .green = 255, .blue = 0});
-        }
-    }
-
-    for(0..gop_wrapper.info.horizontal_resolution) |x| {
-        gop_wrapper.setPixel(x, 0, .{.green = 0,.blue = 0,.red = 255});
     }
 
     entry(uefi.system_table, vmap_data.conventional_region, gop_wrapper);
