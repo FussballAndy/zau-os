@@ -13,9 +13,11 @@ const console = @import("./console.zig");
 const exceptions = @import("./exception.zig");
 
 pub var global_allocator: Allocator = undefined;
+var global_gop: *GOPWrapper = undefined;
 
 export fn _start(sys_table: *SystemTable, memory_regions: memory.MemoryRegions, gop_wrapper: *GOPWrapper) callconv(.C) noreturn {
     _ = sys_table;
+    global_gop = gop_wrapper;
 
     const buffer_ptr: [*]u8 = @ptrFromInt(memory_regions.usable_memory_start);
     const buffer_len = memory_regions.usable_memory_end - memory_regions.usable_memory_start;
@@ -37,7 +39,9 @@ export fn _start(sys_table: *SystemTable, memory_regions: memory.MemoryRegions, 
         console.reset();
         paintScreen(gop_wrapper, .{});
         // Catch in a catch seems cursed, also bsod
-        screenWriter.print("Encountered following error: {!}", .{err}) catch paintScreen(gop_wrapper, .{.blue = 255});
+        // @errorName seems to cause ub. idk why but for now we just stick to this instead of
+        // {s} and @errorName(err)
+        screenWriter.print("Encountered following error: {}\n", .{err}) catch paintScreen(gop_wrapper, .{.blue = 255});
     };
 
     while (true) {}
@@ -58,6 +62,18 @@ pub fn paintScreen(gop_wrapper: *GOPWrapper, color: graphics.Color) void {
         for(0..gop_wrapper.info.horizontal_resolution) |x| {
             gop_wrapper.setPixel(x, y, color);
         }
+    }
+}
+
+pub fn panic(msg: []const u8, error_return_trace: ?*std.builtin.StackTrace, ret_addr: ?usize) noreturn {
+    _ = error_return_trace;
+    _ = ret_addr;
+    @setCold(true);
+    paintScreen(global_gop, .{.blue = 255});
+    const errorWriter = console.setupConsole(global_gop);
+    errorWriter.writeAll(msg) catch {};
+    while (true) {
+        @breakpoint();
     }
 }
 
