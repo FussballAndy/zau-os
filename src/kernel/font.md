@@ -66,11 +66,11 @@ with TTFont(fontPath, fontNumber=0) as ttfont:
             #create the two bitmasks
             l_bitmask = 0
             h_bitmask = 0
-            for x in range(mywidth): # width
-                for y in range(myheight): # height 
+            for y in range(myheight): # height 
+                for x in range(width): # width
                     pixel = img.getpixel((x,y))
                     if pixel == 1:
-                        counter = x * myheight + y
+                        counter = y * width + x
                         if counter >= 64:
                             h_bitmask |= (1 << (counter - 64))
                         else:
@@ -92,3 +92,5 @@ Given here the script was run using the following command:
 python extract_glyphs.py m5x7.ttf --output m5x7 --size 16
 ```
 (the output option is not needed but helpful)
+
+Note: after pasting the result array entries into your code editor you might need to escape certain characters (especially `'` and `\`)

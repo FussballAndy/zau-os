@@ -26,8 +26,8 @@ pub fn reset() void {
 fn putchar(gop: *GOPWrapper, char: Glyph, screen_x: u32, cy: u32) void {
     // Assumes valid char
     const screen_y = cy * GLYPH_HEIGHT;
-    for (0..char.size) |x| {
-        for (0..GLYPH_HEIGHT) |y| {
+    for (0..GLYPH_HEIGHT) |y| {
+        for (0..char.size) |x| {
             if(char.hasPixel(@intCast(x), @intCast(y))) {
                 gop.setPixel(screen_x + x, screen_y + y, .{.red = 255, .green = 255, .blue = 255});
             }
