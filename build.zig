@@ -19,6 +19,12 @@ pub fn build(b: *std.Build) void {
 
     const optimize = b.standardOptimizeOption(.{});
 
+    const libfont_module = b.addModule("libfont", .{
+        .root_source_file = b.path("libraries/libfont/font.zig"),
+        .target = target_k,
+        .optimize = optimize,
+    });
+
     const shared_module = b.addModule("shared", .{
         .root_source_file = b.path("src/shared/shared.zig"),
         .target = target_k,
@@ -49,6 +55,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
     kernel.root_module.addImport("shared", shared_module);
+    kernel.root_module.addImport("libfont", libfont_module);
     kernel.entry = .{.symbol_name = "_start"};
     var kernel_install_step = b.addInstallArtifact(kernel, .{});
 

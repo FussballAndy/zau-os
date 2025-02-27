@@ -69,7 +69,7 @@ pub fn panic(msg: []const u8, error_return_trace: ?*std.builtin.StackTrace, ret_
     _ = error_return_trace;
     _ = ret_addr;
     @setCold(true);
-    paintScreen(global_gop, .{.blue = 255});
+    paintScreen(global_gop, .{.blue = 255, .green = 255});
     const errorWriter = console.setupConsole(global_gop);
     errorWriter.writeAll(msg) catch {};
     while (true) {

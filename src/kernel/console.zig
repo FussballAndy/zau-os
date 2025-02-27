@@ -3,7 +3,7 @@ const std = @import("std");
 const sharedModule = @import("shared");
 const GOPWrapper = sharedModule.graphics.GOPWrapper;
 
-const fontData = @import("./font.zig");
+const fontData = @import("libfont");
 const GLYPH_MAP = fontData.GLYPH_MAP;
 const GLYPH_WIDTH = fontData.GLYPH_WIDTH;
 const GLYPH_HEIGHT = fontData.GLYPH_HEIGHT;
