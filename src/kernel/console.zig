@@ -9,19 +9,47 @@ const GLYPH_WIDTH = fontData.GLYPH_WIDTH;
 const GLYPH_HEIGHT = fontData.GLYPH_HEIGHT;
 const Glyph = fontData.Glyph;
 
-var line_number: u32 = 0;
-var line_x: u32 = 1;
+const WriterContext = struct {
+    line_number: u32 = 0,
+    line_x: u32 = 1,
+    gop_wrapper: *GOPWrapper,
 
-pub const WriterType = std.io.GenericWriter(*GOPWrapper, error{InvalidUtf8}, writerCallback);
+    pub fn increaseLineNumber(self: *WriterContext) void {
+        self.line_number += 1;
+        if ((self.line_number + 1) * GLYPH_HEIGHT >= self.gop_wrapper.info.vertical_resolution) {
+            self.line_number = 0;
+        }
+    }
 
-pub fn setupConsole(gop_wrapper: *GOPWrapper) WriterType {
-    return .{.context = gop_wrapper};
-}
+    pub inline fn putChar(self: *WriterContext, char: Glyph) void {
+        putchar(self.gop_wrapper, char, self.line_x, self.line_number);
+    }
+};
 
-pub fn reset() void {
-    line_number = 0;
-    line_x = 1;
-}
+const WriterType = std.io.GenericWriter(*WriterContext, error{InvalidUtf8}, writerCallback);
+
+pub const Console = struct {
+    context: WriterContext,
+
+    pub fn new(gop_wrapper: *GOPWrapper) Console {
+        return .{
+            .context = .{.gop_wrapper = gop_wrapper},
+        };
+    }
+
+    pub fn writer(self: *Console) WriterType {
+        return .{ .context = &self.context };
+    }
+
+    pub inline fn print(self: *Console, comptime format: []const u8, args: anytype) !void {
+        return self.writer().print(format, args);
+    }
+
+    pub fn reset(self: *Console) void {
+        self.context.line_number = 0;
+        self.context.line_x = 1;
+    }
+};
 
 fn putchar(gop: *GOPWrapper, char: Glyph, screen_x: u32, cy: u32) void {
     // Assumes valid char
@@ -35,47 +63,40 @@ fn putchar(gop: *GOPWrapper, char: Glyph, screen_x: u32, cy: u32) void {
     }
 }
 
-pub fn puts(gop: *GOPWrapper, text: []const u8) !void {
+fn puts(ctx: *WriterContext, text: []const u8) !void {
     const view = try std.unicode.Utf8View.init(text);
     var it = view.iterator();
     while (it.nextCodepoint()) |codepoint| {
         if(codepoint >= 256) continue;
         switch (codepoint) {
             '\r' => {
-                line_x = 1;
+                ctx.line_x = 1;
                 continue;
             },
             '\n' => {
-                increaseLineNumber(gop.info.vertical_resolution);
-                line_x = 1;
+                ctx.increaseLineNumber();
+                ctx.line_x = 1;
                 continue;
             },
             ' ' => {
-                line_x += GLYPH_WIDTH;
+                ctx.line_x += GLYPH_WIDTH;
             },
 
             else => {
                 const glyph = GLYPH_MAP[codepoint];
                 if (glyph.isZero()) continue;
-                putchar(gop, glyph, line_x, line_number);
-                line_x += glyph.size;
+                ctx.putChar(glyph);
+                ctx.line_x += glyph.size;
             }
         }
-        if (line_x + GLYPH_WIDTH >= gop.info.horizontal_resolution) {
-            line_x = 1;
-            increaseLineNumber(gop.info.vertical_resolution);
+        if (ctx.line_x + GLYPH_WIDTH >= ctx.gop_wrapper.info.horizontal_resolution) {
+            ctx.line_x = 1;
+            ctx.increaseLineNumber();
         }
     }
 }
 
-fn increaseLineNumber(max_vert_size: u32) void {
-    line_number += 1;
-    if ((line_number + 1) * GLYPH_HEIGHT >= max_vert_size) {
-        line_number = 0;
-    }
-}
-
-fn writerCallback(gop: *GOPWrapper, out: []const u8) !usize {
-    try puts(gop, out);
+fn writerCallback(ctx: *WriterContext, out: []const u8) !usize {
+    try puts(ctx, out);
     return out.len;
 }

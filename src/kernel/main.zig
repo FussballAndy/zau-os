@@ -9,7 +9,7 @@ const Allocator = std.mem.Allocator;
 const uefi = std.os.uefi;
 const SystemTable = uefi.tables.SystemTable;
 
-const console = @import("./console.zig");
+const Console = @import("./console.zig").Console;
 const exceptions = @import("./exception.zig");
 
 pub var global_allocator: Allocator = undefined;
@@ -31,12 +31,12 @@ export fn _start(sys_table: *SystemTable, memory_regions: memory.MemoryRegions, 
 
     paintScreen(gop_wrapper, .{});
 
-    const screenWriter = console.setupConsole(gop_wrapper);
+    var screenWriter = Console.new(gop_wrapper);
 
     screenWriter.print("Welcome from the kernel!\n", .{}) catch paintScreen(gop_wrapper, .{.red = 255});
 
-    safeStart(screenWriter) catch |err| {
-        console.reset();
+    safeStart(&screenWriter) catch |err| {
+        screenWriter.reset();
         paintScreen(gop_wrapper, .{});
         // Catch in a catch seems cursed, also bsod
         // @errorName seems to cause ub. idk why but for now we just stick to this instead of
@@ -47,7 +47,7 @@ export fn _start(sys_table: *SystemTable, memory_regions: memory.MemoryRegions, 
     while (true) {}
 }
 
-fn safeStart(screenWriter: console.WriterType) !void {
+fn safeStart(screenWriter: *Console) !void {
     const cur_el = exceptions.getCurrentEl();
 
     try screenWriter.print("Current EL: {}\n", .{cur_el});
@@ -70,8 +70,8 @@ pub fn panic(msg: []const u8, error_return_trace: ?*std.builtin.StackTrace, ret_
     _ = ret_addr;
     @setCold(true);
     paintScreen(global_gop, .{.blue = 255, .green = 255});
-    const errorWriter = console.setupConsole(global_gop);
-    errorWriter.writeAll(msg) catch {};
+    var errorWriter = Console.new(global_gop);
+    errorWriter.writer().writeAll(msg) catch {};
     while (true) {
         @breakpoint();
     }
