@@ -52,9 +52,11 @@ fn safeStart(screenWriter: *Console) !void {
 
     try screenWriter.print("Current EL: {}\n", .{cur_el});
 
-    try screenWriter.print("abcdefghijklmnopqrstuvxyzABCDEFGHIJKLMNOPQRSTUVWXYZ\n", .{});
+    const cur_spsel = exceptions.getSPSel();
 
-    return error.YouAreAPoopyHead;
+    try screenWriter.print("Current SPSel: {}\n", .{cur_spsel});
+
+    try screenWriter.print("abcdefghijklmnopqrstuvxyzABCDEFGHIJKLMNOPQRSTUVWXYZ\n", .{});
 }
 
 pub fn paintScreen(gop_wrapper: *GOPWrapper, color: graphics.Color) void {
