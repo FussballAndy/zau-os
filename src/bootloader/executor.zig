@@ -9,11 +9,9 @@ const KernelData = loaderMod.KernelData;
 
 const log = @import("./log.zig");
 
-const memory = @import("./memory.zig");
-
-const virtual_memory = @import("./virtual_memory/index.zig");
-
-const MemoryInfo = @import("./memory_info.zig").MemoryInfo;
+const memory = @import("./memory/index.zig");
+const MemoryInfo = memory.MemoryInfo;
+const VirtualMapData = memory.VirtualMapData;
 
 const sharedModule = @import("shared");
 const MemoryRegions = sharedModule.memory.MemoryRegions;
@@ -24,9 +22,9 @@ fn exitBootServices(boot: *uefi.tables.BootServices, map_key: usize) Status {
     return boot.exitBootServices(uefi.handle, map_key);
 }
 
-fn mapToVirtualMemory(memory_info: *MemoryInfo, allocator: std.mem.Allocator, change_pointers: anytype) !virtual_memory.VirtualMapData {
-    const memory_regions = virtual_memory.buildVirtualMap(memory_info,allocator);
-    virtual_memory.updatePointers(memory_info, change_pointers);
+fn mapToVirtualMemory(memory_info: *MemoryInfo, allocator: std.mem.Allocator, change_pointers: anytype) !VirtualMapData {
+    const memory_regions = memory.buildVirtualMap(memory_info,allocator);
+    memory.updatePointers(memory_info, change_pointers);
     return memory_regions;
 }
 

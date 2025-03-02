@@ -2,12 +2,12 @@ const std = @import("std");
 const uefi = std.os.uefi;
 const MemoryDescriptor = uefi.tables.MemoryDescriptor;
 
-const MemoryInfo = @import("./memory_info.zig").MemoryInfo;
+const MemoryInfo = @import("./structs.zig").MemoryInfo;
 
-const UefiResult = @import("./status.zig").UefiResult;
+const UefiResult = @import("../status.zig").UefiResult;
 const Result = UefiResult(MemoryInfo);
 
-const log = @import("./log.zig");
+const log = @import("../log.zig");
 
 
 pub fn getMemoryInfo(boot: *uefi.tables.BootServices, allocator: std.mem.Allocator) Result {

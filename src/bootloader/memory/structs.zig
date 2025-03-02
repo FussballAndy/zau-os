@@ -2,6 +2,8 @@ const std = @import("std");
 const uefi = std.os.uefi;
 const MemoryDescriptor = uefi.tables.MemoryDescriptor;
 
+pub const MemoryRegions = @import("shared").memory.MemoryRegions;
+
 pub const MemoryInfo = struct {
     /// Note that this is less of an actual array as we use it in zig and rather just the pointer
     /// to the base of the memory descriptors. Problem is that the descriptor size does not necessarily
@@ -44,4 +46,9 @@ pub const MemoryMapIterator = struct {
         }
         return null;
     }
+};
+
+pub const VirtualMapData = struct {
+    virtual_map: MemoryInfo,
+    conventional_region: MemoryRegions
 };
