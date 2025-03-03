@@ -13,18 +13,6 @@ pub fn UefiResult(E: type) type {
     return union(enum) {
         ok: E,
         err: uefi.Status,
-
-        const Self = @This();
-
-        pub fn printError(self: Self) void {
-            if(self == .err) {
-                inline for (@typeInfo(uefi.Status).Enum.fields) |field| {
-                    if (self.err == @field(uefi.Status, field.name)) {
-                        log.putslnErr(field.name);
-                    }
-                }
-            }
-        }
     };
 }
 

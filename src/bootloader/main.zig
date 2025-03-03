@@ -11,6 +11,7 @@ const exec = @import("./executor.zig");
 const graphics = @import("./graphics.zig");
 
 const GOPWrapper = @import("shared").graphics.GOPWrapper;
+const heap = @import("./heap.zig");
 
 pub fn main() uefi.Status {
     var status = log.putsln("Welcome from the Bootloader!");
@@ -18,33 +19,33 @@ pub fn main() uefi.Status {
         return status;
     }
 
-    defer _ = log.putsln("\r\n"); // Padding
+    status = inner_main();
 
+    const tag_name = std.enums.tagName(uefi.Status, status);
+    log.print("Result: {?s}\r\n", .{tag_name});
+
+    _ = log.putsln("\r\n"); // Padding
+
+    return status;
+}
+
+fn inner_main() uefi.Status {
     const boot: *uefi.tables.BootServices = uefi.system_table.boot_services orelse {
         log.putslnErr("Failed to load boot services");
         return uefi.Status.Unsupported;
     };
 
-    const heap_size = 4 * 1024 * 1024; // 64 MB
-    const heap_pages = heap_size / 4096;
-    var heap: [*]align(4096) u8 = undefined;
-    status = boot.allocatePages(.AllocateAnyPages, uefi.tables.MemoryType.LoaderData, heap_pages, &heap);
-    if(status != .Success) {
-        log.putslnErr("Failed to allocate heap");
-        const tag_name = std.enums.tagName(uefi.Status, status);
-        log.print("Result: {?s}", .{tag_name});
-        return status;
+    const heap_result = heap.allocateHeap(boot);
+    if(heap_result == .err) {
+        return heap_result.err;
     }
-    defer _ = boot.freePages(heap, heap_pages);
-    const heap_slice = heap[0..heap_size];
-    var buffer_alloc = std.heap.FixedBufferAllocator.init(heap_slice);
+    var buffer_alloc = heap_result.ok;
     const allocator = buffer_alloc.allocator();
 
     _ = log.putsln("Loading file handles.");
 
     const rootdir_result = fs.getRootDir(boot);
     if(rootdir_result == .err) {
-        rootdir_result.printError();
         return rootdir_result.err;
     }
     const rootdir = rootdir_result.ok;
@@ -54,7 +55,6 @@ pub fn main() uefi.Status {
 
     const kernel_data_raw = loader.loadKernel(boot, rootdir);
     if(kernel_data_raw == .err) {
-        kernel_data_raw.printError();
         return kernel_data_raw.err;
     }
     var kernel_data = kernel_data_raw.ok;
@@ -64,13 +64,11 @@ pub fn main() uefi.Status {
 
     const gop_raw = graphics.getGOP(boot);
     if(gop_raw == .err) {
-        gop_raw.printError();
         return gop_raw.err;
     }
     const gop = gop_raw.ok;
     const setup_result = graphics.setupGOP(gop);
     if(setup_result == .err) {
-        setup_result.printError();
         return setup_result.err;
     }
     var gop_wrapper = setup_result.ok;
@@ -78,10 +76,5 @@ pub fn main() uefi.Status {
     _ = log.putsln("Success.");
     _ = log.putsln("Starting kernel. Have fun");
 
-    status = exec.startKernel(boot, allocator, &kernel_data, &gop_wrapper);
-
-    const tag_name = std.enums.tagName(uefi.Status, status);
-    log.print("Result: {?s}", .{tag_name});
-
-    return status;
+    return exec.startKernel(boot, allocator, &kernel_data, &gop_wrapper);
 }
