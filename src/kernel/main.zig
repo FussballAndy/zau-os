@@ -15,7 +15,7 @@ const exceptions = @import("./exception.zig");
 pub var global_allocator: Allocator = undefined;
 var global_gop: *GOPWrapper = undefined;
 
-export fn _start(sys_table: *SystemTable, memory_regions: memory.MemoryRegions, gop_wrapper: *GOPWrapper) callconv(.C) noreturn {
+export fn _start(sys_table: *SystemTable, memory_regions: memory.MemoryRegions, gop_wrapper: *GOPWrapper) callconv(.c) noreturn {
     _ = sys_table;
     global_gop = gop_wrapper;
 

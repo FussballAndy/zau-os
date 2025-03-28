@@ -25,19 +25,31 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    const shared_module = b.addModule("shared", .{
+    const shared_module = b.createModule(.{
         .root_source_file = b.path("src/shared/shared.zig"),
         .target = target_k,
         .optimize = optimize,
     });
 
-    const efi = b.addExecutable(.{
-        .name = "boot_arm64",
+    const bootloader_module = b.createModule(.{    
         .root_source_file = b.path("src/bootloader/main.zig"),
         .target = target_bl,
         .optimize = optimize,
     });
-    efi.root_module.addImport("shared", shared_module);
+    bootloader_module.addImport("shared", shared_module);
+
+    const kernel_module = b.createModule(.{
+        .root_source_file = b.path("src/kernel/main.zig"),
+        .target = target_k,
+        .optimize = optimize,
+    });
+    kernel_module.addImport("shared", shared_module);
+    kernel_module.addImport("libfont", libfont_module);
+
+    const efi = b.addExecutable(.{
+        .name = "boot_arm64",
+        .root_module = bootloader_module,
+    });
     // efi.entry = .{.symbol_name = "EfiMain"};
     efi.subsystem = .EfiApplication;
     var efi_install_step = b.addInstallArtifact(efi, .{});
@@ -50,12 +62,8 @@ pub fn build(b: *std.Build) void {
 
     const kernel = b.addExecutable(.{
         .name = "kernel",
-        .root_source_file = b.path("src/kernel/main.zig"),
-        .target = target_k,
-        .optimize = optimize,
+        .root_module = kernel_module,
     });
-    kernel.root_module.addImport("shared", shared_module);
-    kernel.root_module.addImport("libfont", libfont_module);
     kernel.entry = .{.symbol_name = "_start"};
     var kernel_install_step = b.addInstallArtifact(kernel, .{});
 
