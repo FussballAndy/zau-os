@@ -15,7 +15,7 @@ const heap = @import("./heap.zig");
 
 pub fn main() uefi.Status {
     var status = log.putsln("Welcome from the Bootloader!");
-    if(status != .Success) {
+    if(status != .success) {
         return status;
     }
 
@@ -32,7 +32,7 @@ pub fn main() uefi.Status {
 fn inner_main() uefi.Status {
     const boot: *uefi.tables.BootServices = uefi.system_table.boot_services orelse {
         log.putslnErr("Failed to load boot services");
-        return uefi.Status.Unsupported;
+        return uefi.Status.unsupported;
     };
 
     const heap_result = heap.allocateHeap(boot);

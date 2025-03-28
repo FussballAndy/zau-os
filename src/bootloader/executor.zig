@@ -32,7 +32,6 @@ fn mapToVirtualMemory(memory_info: *MemoryInfo, allocator: std.mem.Allocator, ch
 pub fn startKernel(boot: *uefi.tables.BootServices, allocator: std.mem.Allocator, data: *KernelData, gop_wrapper: *GOPWrapper) Status {
     const memory_info_raw = memory.getMemoryInfo(boot, allocator);
     if(memory_info_raw == .err) {
-        memory_info_raw.printError();
         return memory_info_raw.err;
     }
     var memory_info = memory_info_raw.ok;
@@ -41,10 +40,10 @@ pub fn startKernel(boot: *uefi.tables.BootServices, allocator: std.mem.Allocator
 
     var frame_buffer_address = gop_wrapper.framebuffer;
     const pointers_to_change = .{&entry, &frame_buffer_address};
-    const vmap_data = mapToVirtualMemory(&memory_info, allocator, pointers_to_change) catch return Status.OutOfResources;
+    const vmap_data = mapToVirtualMemory(&memory_info, allocator, pointers_to_change) catch return Status.out_of_resources;
 
     var status = exitBootServices(boot, memory_info.map_key);
-    if(status != .Success) {
+    if(status != .success) {
         log.putslnErr("Failed to exit boot services");
         return status;
     }
@@ -53,7 +52,7 @@ pub fn startKernel(boot: *uefi.tables.BootServices, allocator: std.mem.Allocator
     
     status = uefi.system_table.runtime_services.setVirtualAddressMap(vmap.memory_map_size, vmap.descriptor_size, vmap.descriptor_version, vmap.memory_map);
     
-    if(status != .Success) {
+    if(status != .success) {
         for(0..gop_wrapper.info.horizontal_resolution) |x| {
             gop_wrapper.setPixel(x, 0, .{.red = 255});
         }

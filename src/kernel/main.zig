@@ -68,9 +68,9 @@ pub fn paintScreen(gop_wrapper: *GOPWrapper, color: graphics.Color) void {
 }
 
 pub fn panic(msg: []const u8, error_return_trace: ?*std.builtin.StackTrace, ret_addr: ?usize) noreturn {
+    @branchHint(.cold);
     _ = error_return_trace;
     _ = ret_addr;
-    @setCold(true);
     paintScreen(global_gop, .{.blue = 255, .green = 255});
     var errorWriter = Console.new(global_gop);
     errorWriter.writer().writeAll(msg) catch {};

@@ -1,6 +1,7 @@
 .{
-    .name = "zau-os",
+    .name = .zau_os,
     .version = "0.0.0",
+    .fingerprint = 0xaf41bf34e223f971,
     .dependencies = .{},
 
     .paths = .{

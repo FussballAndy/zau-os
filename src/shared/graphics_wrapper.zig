@@ -22,12 +22,12 @@ pub const GOPWrapper = extern struct {
     fn applyFormatOnColor(format: GOP.PixelFormat, pixel: Color) u32 {
         var result: u32 = 0;
         switch (format) {
-            .RedGreenBlueReserved8BitPerColor => {
+            .red_green_blue_reserved_8_bit_per_color => {
                 result = pixel.red;
                 result |= (@as(u32, pixel.green) << 8);
                 result |= (@as(u32, pixel.blue) << 16);
             },
-            .BlueGreenRedReserved8BitPerColor => {
+            .blue_green_red_reserved_8_bit_per_color => {
                 result = pixel.blue;
                 result |= (@as(u32, pixel.green) << 8);
                 result |= (@as(u32, pixel.red) << 16);

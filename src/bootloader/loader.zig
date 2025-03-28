@@ -23,27 +23,28 @@ pub const KernelData = struct {
 
 fn handlePHeaderError() Result {
     log.putslnErr("Failed to read next program header.");
-    return Result{.err = Status.Unsupported};
+    return Result{.err = Status.unsupported};
 }
 
 fn handleReaderError() Result {
     log.putslnErr("Failed to read program header slice into memory.");
-    return Result{.err = Status.Aborted};
+    return Result{.err = Status.aborted};
 }
 
-pub fn loadKernel(boot: *uefi.tables.BootServices, rootdir: *uefi.protocol.File) Result {
-    
-    var kernel_image: *uefi.protocol.File = undefined;
+pub fn loadKernel(boot: *uefi.tables.BootServices, rootdir: *const uefi.protocol.File) Result {
+    var kernel_image_const: *const uefi.protocol.File = undefined;
 
-    var status = rootdir.open(&kernel_image, KERNEL_PATH, uefi.protocol.File.efi_file_mode_read, uefi.protocol.File.efi_file_read_only);
-    if(status != .Success) {
+    var status = rootdir.open(&kernel_image_const, KERNEL_PATH, uefi.protocol.File.efi_file_mode_read, uefi.protocol.File.efi_file_read_only);
+    if(status != .success) {
         log.putslnErr("Failed to open kernel image file.");
         return Result{.err = status};
     }
 
+    const kernel_image: *uefi.protocol.File = @constCast(kernel_image_const);
+
     const header = std.elf.Header.read(kernel_image) catch {
         log.putslnErr("Failed to read header");
-        return Result{.err = Status.Aborted};
+        return Result{.err = Status.aborted};
     };
     
 
@@ -72,8 +73,8 @@ pub fn loadKernel(boot: *uefi.tables.BootServices, rootdir: *uefi.protocol.File)
 
     var image_addr: [*]align(PAGE_SIZE) u8 = undefined;
 
-    status = boot.allocatePages(uefi.tables.AllocateType.AllocateAnyPages, uefi.tables.MemoryType.LoaderData, image_size / PAGE_SIZE, &image_addr);
-    if(status != .Success) {
+    status = boot.allocatePages(uefi.tables.AllocateType.allocate_any_pages, uefi.tables.MemoryType.loader_data, image_size / PAGE_SIZE, &image_addr);
+    if(status != .success) {
         log.putslnErr("Failed to allocate page for kernel image.");
         return Result{.err = status};
     }

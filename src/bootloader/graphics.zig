@@ -21,7 +21,7 @@ pub fn getGOP(boot: *BootServices) Result {
         log.putslnErr("Couldn't locate GOP.");
         return Result{.err = status};
     }
-    const gop = gop_raw orelse return Result{.err = uefi.Status.Unsupported};
+    const gop = gop_raw orelse return Result{.err = uefi.Status.unsupported};
     return Result{.ok = gop};
 }
 
@@ -50,7 +50,7 @@ pub fn setupGOP(gop: *GOP) statusMod.UefiResult(GOPWrapper) {
 
         return .{.ok = wrapper};
     } else {
-        return .{.err = .Unsupported};
+        return .{.err = .unsupported};
     }
 
 

@@ -7,7 +7,7 @@ const EfiError = Status.EfiError;
 
 const log = @import("./log.zig");
 const statusTools = @import("./status.zig");
-const Result = statusTools.UefiResult(*uefi.protocol.File);
+const Result = statusTools.UefiResult(*const uefi.protocol.File);
 
 const constants = @import("./consts.zig");
 const EFI_BY_HANDLE_PROTOCOL = constants.EFI_BY_HANDLE_PROTOCOL;
@@ -17,32 +17,32 @@ pub fn getRootDir(boot: *uefi.tables.BootServices) Result {
     var image: ?*uefi.protocol.LoadedImage = null;
     // ptrCast SAFETY: *?*LoadedImage -> *?*anyopaque
     var status = boot.openProtocol(uefi.handle, &guid, @ptrCast(&image), uefi.handle, null, EFI_BY_HANDLE_PROTOCOL);
-    if(status != .Success) {
+    if(status != .success) {
         log.putslnErr("Failed to open loaded image protocol!");
         return Result{.err = status};
     }
     
     if(image == null) {
         log.putslnErr("Image somehow is null.");
-        return Result{.err = Status.Aborted};
+        return Result{.err = Status.aborted};
     }
 
-    const root_device = image.?.device_handle orelse return Result{.err = Status.Aborted};
+    const root_device = image.?.device_handle orelse return Result{.err = Status.aborted};
 
     var rootfs_raw: ?*uefi.protocol.SimpleFileSystem = null;
     guid = uefi.protocol.SimpleFileSystem.guid;
     // ptrCast SAFETY: *?*SimpleFileSystem -> *?*anyopaque
     status = boot.openProtocol(root_device, &guid, @ptrCast(&rootfs_raw), uefi.handle, null, EFI_BY_HANDLE_PROTOCOL);
-    if(status != .Success) {
+    if(status != .success) {
         log.putslnErr("Failed to get root volume");
         return Result{.err = status};
     }
 
-    var rootfs = rootfs_raw orelse return Result{.err = Status.Aborted};
-    var rootdir: *uefi.protocol.File = undefined;
+    var rootfs = rootfs_raw orelse return Result{.err = Status.aborted};
+    var rootdir: *const uefi.protocol.File = undefined;
 
     status = rootfs.openVolume(&rootdir);
-    if(status != .Success) {
+    if(status != .success) {
         log.putslnErr("Failed to open volume.");
         return Result{.err = status};
     }

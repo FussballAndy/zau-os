@@ -11,7 +11,7 @@ inline fn dynamicPuts(comptime out: []const u8, stream: ?*uefi.protocol.SimpleTe
     if(stream) |str| {
         return str.outputString(W(out));
     }
-    return uefi.Status.Unsupported;
+    return uefi.Status.unsupported;
 }
 
 pub fn puts(comptime out: []const u8) uefi.Status {
