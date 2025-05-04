@@ -13,10 +13,9 @@ const graphics = @import("shared").graphics;
 const GOPWrapper = graphics.GOPWrapper;
 
 pub fn getGOP(boot: *BootServices) Result {
-    var guid align(8) = GOP.guid;
     var gop_raw: ?*GOP = null;
     // ptrCast SAFETY: *?*GOP -> *?*anyopaque
-    const status = boot.locateProtocol(&guid, null, @ptrCast(&gop_raw));
+    const status = boot.locateProtocol(&GOP.guid, null, @ptrCast(&gop_raw));
     if(isError(status)) {
         log.putslnErr("Couldn't locate GOP.");
         return Result{.err = status};
