@@ -1,3 +1,9 @@
-pub usingnamespace @import("./virtual_map.zig");
-pub usingnamespace @import("./memory_info.zig");
-pub usingnamespace @import("./structs.zig");
+const virtual_map = @import("./virtual_map.zig");
+const memory_info = @import("./memory_info.zig");
+const structs = @import("./structs.zig");
+
+pub const MemoryInfo = structs.MemoryInfo;
+pub const VirtualMapData = structs.VirtualMapData;
+pub const buildVirtualMap = virtual_map.buildVirtualMap;
+pub const updatePointers = virtual_map.updatePointers;
+pub const getMemoryInfo = memory_info.getMemoryInfo;

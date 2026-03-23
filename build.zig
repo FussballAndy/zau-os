@@ -54,12 +54,6 @@ pub fn build(b: *std.Build) void {
     efi.subsystem = .EfiApplication;
     var efi_install_step = b.addInstallArtifact(efi, .{});
 
-    const unit_tests = b.addTest(.{
-        .root_source_file = b.path("src/bootloader/status.zig"),
-        .target = b.standardTargetOptions(.{}),
-    });
-    const run_unit_tests = b.addRunArtifact(unit_tests);
-
     const kernel = b.addExecutable(.{
         .name = "kernel",
         .root_module = kernel_module,
@@ -70,9 +64,6 @@ pub fn build(b: *std.Build) void {
     const efi_step = b.step("efi", "Build the entry point");
     efi_step.dependOn(&efi_install_step.step);
     efi_step.dependOn(&kernel_install_step.step);
-
-    const test_step = b.step("test", "Test if isError works");
-    test_step.dependOn(&run_unit_tests.step);
 
     // In theory you could make a run step here that calls qemu with the generated elf file
 }

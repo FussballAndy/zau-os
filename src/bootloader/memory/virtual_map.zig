@@ -13,9 +13,9 @@ const MemoryRegions = memory_structs.MemoryRegions;
 /// The resulting map will be structured as follows:
 /// - All non conventional (reserved) blocks will stay at the same address (`virtual = physical`)
 /// - All conventional blocks get grouped together and build a single block starting at (`max(physical+pages*page_size)`)
-pub fn buildVirtualMap(memory_info: *MemoryInfo, alloc: Allocator) !VirtualMapData {
+pub fn buildVirtualMap(memory_info: *MemoryInfo, alloc: Allocator) uefi.Error!VirtualMapData {
     const desc_size = memory_info.descriptor_size;
-    const virtual_map_bytes: []align(8) u8 = try alloc.alignedAlloc(u8, 8, memory_info.memory_map_size * desc_size);
+    const virtual_map_bytes: []align(8) u8 = alloc.alignedAlloc(u8, std.mem.Alignment.fromByteUnits(8), memory_info.memory_map_size * desc_size) catch return uefi.Error.OutOfResources;
     const virtual_map_ptr: [*]align(8) u8 = virtual_map_bytes.ptr;
     var virtual_map_item: usize = 0;
 
@@ -40,7 +40,7 @@ pub fn buildVirtualMap(memory_info: *MemoryInfo, alloc: Allocator) !VirtualMapDa
     }
 
     const virt_mem_info = MemoryInfo{
-        .map_key = 0,
+        .map_key = undefined,
         // ptrCast SAFETY: [*]align(8) u8 -> [*]MemoryDescriptor
         .memory_map = @ptrCast(virtual_map_ptr),
         .memory_map_size = virtual_map_item * memory_info.descriptor_size,

@@ -1,80 +1,46 @@
 const std = @import("std");
 const uefi = std.os.uefi;
 const log = @import("./log.zig");
-const statusTools = @import("./status.zig");
-const loader = @import("./loader.zig");
+const loader = @import("./image/index.zig");
 
-const fs = @import("./fs.zig");
-
-const exec = @import("./executor.zig");
+const exec = @import("./image/executor.zig");
 
 const graphics = @import("./graphics.zig");
 
 const GOPWrapper = @import("shared").graphics.GOPWrapper;
 const heap = @import("./heap.zig");
 
-pub fn main() uefi.Status {
-    var status = log.putsln("Welcome from the Bootloader!");
-    if(status != .success) {
-        return status;
-    }
+pub fn main() uefi.Error!void {
+    try log.putsln("Welcome from the Bootloader!");
 
-    status = inner_main();
-
-    const tag_name = std.enums.tagName(uefi.Status, status);
-    log.print("Result: {?s}\r\n", .{tag_name});
-
-    _ = log.putsln("\r\n"); // Padding
-
-    return status;
-}
-
-fn inner_main() uefi.Status {
-    const boot: *uefi.tables.BootServices = uefi.system_table.boot_services orelse {
-        log.putslnErr("Failed to load boot services");
-        return uefi.Status.unsupported;
+    inner_main() catch |err| {
+        log.print("Result: {s}\r\n", .{@errorName(err)});
     };
 
-    const heap_result = heap.allocateHeap(boot);
-    if(heap_result == .err) {
-        return heap_result.err;
-    }
-    var buffer_alloc = heap_result.ok;
+    log.putslnErr("\r\n"); // Padding
+}
+
+fn inner_main() uefi.Error!void {
+    const boot: *uefi.tables.BootServices = uefi.system_table.boot_services orelse {
+        log.putslnErr("Failed to load boot services");
+        return uefi.Status.unsupported.err();
+    };
+
+    var buffer_alloc = try heap.allocateHeap(boot);
     const allocator = buffer_alloc.allocator();
 
-    _ = log.putsln("Loading file handles.");
+    log.putslnErr("Loading file handles.");
 
-    const rootdir_result = fs.getRootDir(boot);
-    if(rootdir_result == .err) {
-        return rootdir_result.err;
-    }
-    const rootdir = rootdir_result.ok;
+    var kernel_data = try loader.loadKernelFromDisk(boot);
 
-    _ = log.putsln("Success.");
-    _ = log.putsln("Loading kernel into memory.");
+    log.putslnErr("Success.");
+    log.putslnErr("Loading and setting up GOP.");
 
-    const kernel_data_raw = loader.loadKernel(boot, rootdir);
-    if(kernel_data_raw == .err) {
-        return kernel_data_raw.err;
-    }
-    var kernel_data = kernel_data_raw.ok;
+    const gop = try graphics.getGOP(boot);
+    var gop_wrapper = try graphics.setupGOP(gop);
 
-    _ = log.putsln("Success.");
-    _ = log.putsln("Loading and setting up GOP.");
-
-    const gop_raw = graphics.getGOP(boot);
-    if(gop_raw == .err) {
-        return gop_raw.err;
-    }
-    const gop = gop_raw.ok;
-    const setup_result = graphics.setupGOP(gop);
-    if(setup_result == .err) {
-        return setup_result.err;
-    }
-    var gop_wrapper = setup_result.ok;
-
-    _ = log.putsln("Success.");
-    _ = log.putsln("Starting kernel. Have fun");
+    log.putslnErr("Success.");
+    log.putslnErr("Starting kernel. Have fun");
 
     return exec.startKernel(boot, allocator, &kernel_data, &gop_wrapper);
 }

@@ -1,29 +1,28 @@
 const std = @import("std");
 const uefi = std.os.uefi;
-const status = @import("./status.zig");
-const sTE = status.statusToError;
 
 const W = std.unicode.utf8ToUtf16LeStringLiteral;
 
 const PrintError = error{InvalidUtf8,TooLongSlice};
 
-inline fn dynamicPuts(comptime out: []const u8, stream: ?*uefi.protocol.SimpleTextOutput) uefi.Status {
+inline fn dynamicPuts(comptime out: []const u8, stream: ?*uefi.protocol.SimpleTextOutput) uefi.Error!void {
     if(stream) |str| {
-        return str.outputString(W(out));
+        _ = try str.outputString(W(out));
+        return;
     }
-    return uefi.Status.unsupported;
+    return uefi.Status.unsupported.err();
 }
 
-pub fn puts(comptime out: []const u8) uefi.Status {
+pub fn puts(comptime out: []const u8) uefi.Error!void {
     return dynamicPuts(out, uefi.system_table.con_out);
 }
 
-pub fn putsln(comptime out: []const u8) uefi.Status {
+pub fn putsln(comptime out: []const u8) uefi.Error!void {
     return puts(out++.{'\r','\n'});
 }
 
 pub fn putsErr(comptime out: []const u8) void {
-    _ = dynamicPuts(out, uefi.system_table.std_err);
+    _ = dynamicPuts(out, uefi.system_table.std_err) catch {};
 }
 
 pub fn putslnErr(comptime out: []const u8) void {
@@ -43,7 +42,7 @@ fn writerCallback(_: void, out: []const u8) error{}!usize {
             if(dest_index >= 512) {
                 buffer[dest_index] = 0;
                 // ptrCast SAFETY: buffer of 513 elements to 512 + 0 sentinel
-                _ = uefi.system_table.con_out.?.outputString(@ptrCast(&buffer));
+                _ = uefi.system_table.con_out.?.outputString(@ptrCast(&buffer)) catch {};
                 actual_dest_index += dest_index;
                 dest_index = 0;
             }
@@ -56,7 +55,7 @@ fn writerCallback(_: void, out: []const u8) error{}!usize {
                 // we do not need to pass a subslice as uefi terminates once it encounters a null-terminator
                 // which is then set at index 511 instead of 512.
                 // ptrCast SAFETY: buffer of 513 elements to 512 + 0 sentinel (0 sentinel may already be at index 511)
-                _ = uefi.system_table.con_out.?.outputString(@ptrCast(&buffer));
+                _ = uefi.system_table.con_out.?.outputString(@ptrCast(&buffer)) catch {};
                 actual_dest_index += dest_index;
                 dest_index = 0;
             }
@@ -69,7 +68,7 @@ fn writerCallback(_: void, out: []const u8) error{}!usize {
     if(dest_index != 0) {
         buffer[dest_index] = 0;
         // ptrCast SAFETY: buffer of dest_index elements to 512 + 0 sentinel (although actual 0 sentinel already at dest_index)
-        _ = uefi.system_table.con_out.?.outputString(@ptrCast(&buffer));
+        _ = uefi.system_table.con_out.?.outputString(@ptrCast(&buffer)) catch {};
     }
     actual_dest_index += dest_index;
     return actual_dest_index;

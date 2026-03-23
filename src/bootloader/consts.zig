@@ -7,5 +7,3 @@ const W = std.unicode.utf8ToUtf16LeStringLiteral;
 
 
 pub const KERNEL_PATH: [:0]const u16 = W("kernel");
-
-pub const EFI_BY_HANDLE_PROTOCOL = ProtocolAttributes{.by_handle_protocol = true};

@@ -3,36 +3,29 @@ const uefi = std.os.uefi;
 const BootServices = uefi.tables.BootServices;
 const GOP = uefi.protocol.GraphicsOutput;
 
-const statusMod = @import("./status.zig");
-const Result = statusMod.UefiResult(*GOP);
-const isError = statusMod.isError;
-
 const log = @import("./log.zig");
 
 const graphics = @import("shared").graphics;
 const GOPWrapper = graphics.GOPWrapper;
 
-pub fn getGOP(boot: *BootServices) Result {
-    var gop_raw: ?*GOP = null;
+pub fn getGOP(boot: *BootServices) uefi.Error!*GOP {
     // ptrCast SAFETY: *?*GOP -> *?*anyopaque
-    const status = boot.locateProtocol(&GOP.guid, null, @ptrCast(&gop_raw));
-    if(isError(status)) {
+    const gop_raw = boot.locateProtocol(GOP, null) catch |err| {
         log.putslnErr("Couldn't locate GOP.");
-        return Result{.err = status};
+        return err;
+    };
+    if(gop_raw) |gop| {
+        return gop;
+    } else {
+        return uefi.Error.Unsupported;
     }
-    const gop = gop_raw orelse return Result{.err = uefi.Status.unsupported};
-    return Result{.ok = gop};
 }
 
-pub fn setupGOP(gop: *GOP) statusMod.UefiResult(GOPWrapper) {
-    
-    var size_of_info: usize = 0;
-    var info: *GOP.Mode.Info = undefined;
-    const status = gop.queryMode(gop.mode.mode, &size_of_info, &info);
-    if(isError(status)) {
+pub fn setupGOP(gop: *GOP) uefi.Error!GOPWrapper {
+    const info = gop.queryMode(gop.mode.mode) catch |err| {
         log.putslnErr("Failed to query GOP mode.");
-        return .{.err = status};
-    }
+        return err;
+    };
     log.print("Current Mode: {}/{}\r\n", .{gop.mode.mode, gop.mode.max_mode});
     log.print("Width x Height: {}/{}\r\n", .{info.horizontal_resolution, info.vertical_resolution});
     log.print("Framebuffer address, size: {x}, {x}\r\n", .{gop.mode.frame_buffer_base, gop.mode.frame_buffer_size});
@@ -42,15 +35,11 @@ pub fn setupGOP(gop: *GOP) statusMod.UefiResult(GOPWrapper) {
     // SAFETY: Mode.frame_buffer_base stores the base address of the framebuffer
     const framebuffer_address: ?[*]u32 = @ptrFromInt(gop.mode.frame_buffer_base);
     if(framebuffer_address) |fb_address| {
-        const wrapper = GOPWrapper{
+        return .{
             .framebuffer = fb_address,
             .info = info.*,
         };
-
-        return .{.ok = wrapper};
     } else {
-        return .{.err = .unsupported};
+        return uefi.Error.Unsupported;
     }
-
-
 }

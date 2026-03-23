@@ -12,7 +12,7 @@ pub const MemoryInfo = struct {
     /// See also MemoryMapIterator
     memory_map: [*]MemoryDescriptor,
     memory_map_size: usize,
-    map_key: usize,
+    map_key: uefi.tables.MemoryMapKey,
     descriptor_size: usize,
     descriptor_version: u32,
 
