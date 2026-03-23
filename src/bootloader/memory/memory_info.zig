@@ -7,37 +7,23 @@ const MemoryInfo = @import("./structs.zig").MemoryInfo;
 const log = @import("../log.zig");
 
 
-pub fn getMemoryInfo(boot: *uefi.tables.BootServices, allocator: std.mem.Allocator) uefi.Error!MemoryInfo {
-    var mmap: ?[*]MemoryDescriptor = null;
-    var mmap_size: usize = 0;
-    var mmap_key: uefi.tables.MemoryMapKey = undefined;
-    var desc_size: usize = 0;
-    var desc_version: u32 = 0;
-    var status = boot._getMemoryMap(&mmap_size, @ptrCast(mmap), &mmap_key, &desc_size, &desc_version);
-    if(status != .buffer_too_small) {
-        log.putslnErr("getMemoryMap() didn't return BufferTooSmall, aborting");
-        try status.err();
-    }
+pub fn getMemoryInfo(boot: *uefi.tables.BootServices, allocator: std.mem.Allocator) uefi.Error!uefi.tables.MemoryMapSlice {
+    const mmap_info = boot.getMemoryMapInfo() catch |err| {
+        log.putslnErr("Failed to get memory map info.");
+        return err;
+    };
+
+    log.print("prelim key: {}\r\n", .{@intFromEnum(mmap_info.key)});
 
     // we do not need to allocate more than mmap_size Elements, as the heap is already allocated thus the allocation
     // does not change the memory map
-    const mmap_slice: []align(8) u8 = allocator.alignedAlloc(u8, std.mem.Alignment.fromByteUnits(8), mmap_size) catch {
+    const mmap_buffer = allocator.alignedAlloc(u8, std.mem.Alignment.fromByteUnits(@alignOf(MemoryDescriptor)), mmap_info.len * mmap_info.descriptor_size) catch {
         log.putslnErr("Failed to allocate memory map buffer.");
         return uefi.Error.OutOfResources;
     };
-    // ptrCast SAFETY: [*]u8 -> [*]MemoryDescriptor, u8 has size multiple of memory descriptor size.
-    mmap = @ptrCast(mmap_slice.ptr);
-    status = boot._getMemoryMap(&mmap_size, @ptrCast(mmap), &mmap_key, &desc_size, &desc_version);
-    if(status != .success) {
-        log.putslnErr("Failed to getMemoryMap() with an initialized buffer.");
-        try status.err();
-    }
 
-    return MemoryInfo{
-        .memory_map = mmap.?,
-        .memory_map_size = mmap_size,
-        .map_key = mmap_key,
-        .descriptor_size = desc_size,
-        .descriptor_version = desc_version,
+    return boot.getMemoryMap(mmap_buffer) catch |err| {
+        log.putslnErr("Failed to get memory map with allocated buffer.");
+        return err;
     };
 }

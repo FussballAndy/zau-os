@@ -13,7 +13,7 @@ pub fn allocateHeap(boot: *uefi.tables.BootServices) uefi.Error!std.heap.FixedBu
     };
     
     // defer _ = boot.freePages(heap, heap_pages); why is this here?
-    const heap_raw: []u8 = @ptrCast(heap);
+    var heap_raw: [*]u8 = @ptrCast(heap.ptr);
     const heap_slice = heap_raw[0..heap_size];
     return std.heap.FixedBufferAllocator.init(heap_slice);
 }

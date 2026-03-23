@@ -16,40 +16,54 @@ const MemoryRegions = sharedModule.memory.MemoryRegions;
 const GOPWrapper = sharedModule.graphics.GOPWrapper;
 const EntryType = sharedModule.entry.EntryType;
 
-fn exitBootServices(boot: *uefi.tables.BootServices, map_key: uefi.tables.MemoryMapKey) uefi.Error!void {
-    return boot.exitBootServices(uefi.handle, map_key);
-}
-
-fn mapToVirtualMemory(memory_info: *MemoryInfo, allocator: std.mem.Allocator, change_pointers: anytype) uefi.Error!VirtualMapData {
-    const memory_regions = try memory.buildVirtualMap(memory_info,allocator);
-    memory.updatePointers(memory_info, change_pointers);
+fn mapToVirtualMemory(mmap: *uefi.tables.MemoryMapSlice, allocator: std.mem.Allocator, change_pointers: anytype) uefi.Error!VirtualMapData {
+    const memory_regions = try memory.buildVirtualMap(mmap,allocator);
+    memory.updatePointers(mmap, change_pointers);
     return memory_regions;
 }
 
+fn debug_print_mmap(mmap: *const uefi.tables.MemoryMapSlice) void {
+    var iter = mmap.iterator();
+    while(iter.next()) |desc| {
+        log.print("type: {f} phy: 0x{X} #: {} virt: 0x{X} rt: {}\r\n", .{desc.type, desc.physical_start, desc.number_of_pages, desc.virtual_start, desc.attribute.memory_runtime});
+    }
+    log.print("\r\n", .{});
+}
 
 pub fn startKernel(boot: *uefi.tables.BootServices, allocator: std.mem.Allocator, data: *KernelData, gop_wrapper: *GOPWrapper) uefi.Error!void {
-    var memory_info = try memory.getMemoryInfo(boot, allocator);
+    var mmap = try memory.getMemoryInfo(boot, allocator);
+
+    log.print("key: {}\r\n", .{@intFromEnum(mmap.info.key)});
+
+    // debug_print_mmap(&mmap);
 
     var entry = data.kernel_image_entry;
 
     var frame_buffer_address = gop_wrapper.framebuffer;
     const pointers_to_change = .{&entry, &frame_buffer_address};
-    const vmap_data = mapToVirtualMemory(&memory_info, allocator, pointers_to_change) catch return Status.out_of_resources.err();
+    const vmap_data = mapToVirtualMemory(&mmap, allocator, pointers_to_change) catch return uefi.Error.OutOfResources;
 
-    exitBootServices(boot, memory_info.map_key) catch |err| {
+    log.putslnErr("Setup memory map");
+
+    // debug_print_mmap(&vmap_data.vmap);
+
+    log.print("key: {}\r\n", .{@intFromEnum(mmap.info.key)});
+    // if(true) return;
+
+    boot.exitBootServices(uefi.handle, mmap.info.key) catch |err| {
         log.putslnErr("Failed to exit boot services");
         return err;
     };
 
-    const vmap = vmap_data.virtual_map;
-    
-    const status = uefi.system_table.runtime_services._setVirtualAddressMap(vmap.memory_map_size, vmap.descriptor_size, vmap.descriptor_version, @ptrCast(vmap.memory_map));
-    if(status != .success) {
+    const vmap = vmap_data.vmap;
+
+    uefi.system_table.runtime_services.setVirtualAddressMap(vmap) catch |err| {
         for(0..gop_wrapper.info.horizontal_resolution) |x| {
             gop_wrapper.setPixel(x, 0, .{.red = 255});
         }
-        try status.err();
-    }
+        return err;
+    };
+    
 
     entry(uefi.system_table, vmap_data.conventional_region, gop_wrapper);
 

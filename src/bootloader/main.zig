@@ -23,7 +23,7 @@ pub fn main() uefi.Error!void {
 fn inner_main() uefi.Error!void {
     const boot: *uefi.tables.BootServices = uefi.system_table.boot_services orelse {
         log.putslnErr("Failed to load boot services");
-        return uefi.Status.unsupported.err();
+        return uefi.Error.Unsupported;
     };
 
     var buffer_alloc = try heap.allocateHeap(boot);
