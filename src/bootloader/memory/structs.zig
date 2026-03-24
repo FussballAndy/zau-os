@@ -4,8 +4,4 @@ const MemoryDescriptor = uefi.tables.MemoryDescriptor;
 
 pub const MemoryRegions = @import("shared").memory.MemoryRegions;
 
-
-pub const VirtualMapData = struct {
-    vmap: uefi.tables.MemoryMapSlice,
-    conventional_region: MemoryRegions
-};
+pub const VirtualMapData = struct { vmap: uefi.tables.MemoryMapSlice, conventional_region: MemoryRegions };

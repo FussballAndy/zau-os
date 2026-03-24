@@ -3,7 +3,7 @@ const std = @import("std");
 pub fn build(b: *std.Build) void {
     // https://wiki.osdev.org/Zig_Bare_Bones
     const target_query_bootloader = std.Target.Query{
-        .cpu_arch = .aarch64, 
+        .cpu_arch = .aarch64,
         .os_tag = .uefi,
         .abi = .none,
     };
@@ -31,7 +31,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    const bootloader_module = b.createModule(.{    
+    const bootloader_module = b.createModule(.{
         .root_source_file = b.path("src/bootloader/main.zig"),
         .target = target_bl,
         .optimize = optimize,
@@ -58,7 +58,7 @@ pub fn build(b: *std.Build) void {
         .name = "kernel",
         .root_module = kernel_module,
     });
-    kernel.entry = .{.symbol_name = "_start"};
+    kernel.entry = .{ .symbol_name = "_start" };
     var kernel_install_step = b.addInstallArtifact(kernel, .{});
 
     const efi_step = b.step("efi", "Build the entry point");

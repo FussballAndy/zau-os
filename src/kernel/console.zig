@@ -33,7 +33,7 @@ pub const Console = struct {
 
     pub fn new(gop_wrapper: *GOPWrapper) Console {
         return .{
-            .context = .{.gop_wrapper = gop_wrapper},
+            .context = .{ .gop_wrapper = gop_wrapper },
         };
     }
 
@@ -56,8 +56,8 @@ fn putchar(gop: *GOPWrapper, char: Glyph, screen_x: u32, cy: u32) void {
     const screen_y = cy * GLYPH_HEIGHT;
     for (0..GLYPH_HEIGHT) |y| {
         for (0..char.size) |x| {
-            if(char.hasPixel(@intCast(x), @intCast(y))) {
-                gop.setPixel(screen_x + x, screen_y + y, .{.red = 255, .green = 255, .blue = 255});
+            if (char.hasPixel(@intCast(x), @intCast(y))) {
+                gop.setPixel(screen_x + x, screen_y + y, .{ .red = 255, .green = 255, .blue = 255 });
             }
         }
     }
@@ -67,7 +67,7 @@ fn puts(ctx: *WriterContext, text: []const u8) !void {
     const view = try std.unicode.Utf8View.init(text);
     var it = view.iterator();
     while (it.nextCodepoint()) |codepoint| {
-        if(codepoint >= 256) continue;
+        if (codepoint >= 256) continue;
         switch (codepoint) {
             '\r' => {
                 ctx.line_x = 1;
@@ -87,7 +87,7 @@ fn puts(ctx: *WriterContext, text: []const u8) !void {
                 if (glyph.isZero()) continue;
                 ctx.putChar(glyph);
                 ctx.line_x += glyph.size;
-            }
+            },
         }
         if (ctx.line_x + GLYPH_WIDTH >= ctx.gop_wrapper.info.horizontal_resolution) {
             ctx.line_x = 1;

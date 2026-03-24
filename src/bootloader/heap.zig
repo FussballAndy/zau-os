@@ -11,7 +11,7 @@ pub fn allocateHeap(boot: *uefi.tables.BootServices) uefi.Error!std.heap.FixedBu
         log.print("Result: {s}", .{@errorName(err)});
         return err;
     };
-    
+
     // defer _ = boot.freePages(heap, heap_pages); why is this here?
     var heap_raw: [*]u8 = @ptrCast(heap.ptr);
     const heap_slice = heap_raw[0..heap_size];

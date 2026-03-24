@@ -33,7 +33,7 @@ export fn _start(sys_table: *SystemTable, memory_regions: memory.MemoryRegions, 
 
     var screenWriter = Console.new(gop_wrapper);
 
-    screenWriter.print("Welcome from the kernel!\n", .{}) catch paintScreen(gop_wrapper, .{.red = 255});
+    screenWriter.print("Welcome from the kernel!\n", .{}) catch paintScreen(gop_wrapper, .{ .red = 255 });
 
     safeStart(&screenWriter) catch |err| {
         screenWriter.reset();
@@ -41,7 +41,7 @@ export fn _start(sys_table: *SystemTable, memory_regions: memory.MemoryRegions, 
         // Catch in a catch seems cursed, also bsod
         // @errorName seems to cause ub. idk why but for now we just stick to this instead of
         // {s} and @errorName(err)
-        screenWriter.print("Encountered following error: {}\n", .{err}) catch paintScreen(gop_wrapper, .{.blue = 255});
+        screenWriter.print("Encountered following error: {}\n", .{err}) catch paintScreen(gop_wrapper, .{ .blue = 255 });
     };
 
     while (true) {}
@@ -60,8 +60,8 @@ fn safeStart(screenWriter: *Console) !void {
 }
 
 pub fn paintScreen(gop_wrapper: *GOPWrapper, color: graphics.Color) void {
-    for(0..gop_wrapper.info.vertical_resolution) |y| {
-        for(0..gop_wrapper.info.horizontal_resolution) |x| {
+    for (0..gop_wrapper.info.vertical_resolution) |y| {
+        for (0..gop_wrapper.info.horizontal_resolution) |x| {
             gop_wrapper.setPixel(x, y, color);
         }
     }
@@ -71,7 +71,7 @@ pub fn panic(msg: []const u8, error_return_trace: ?*std.builtin.StackTrace, ret_
     @branchHint(.cold);
     _ = error_return_trace;
     _ = ret_addr;
-    paintScreen(global_gop, .{.blue = 255, .green = 255});
+    paintScreen(global_gop, .{ .blue = 255, .green = 255 });
     var errorWriter = Console.new(global_gop);
     errorWriter.writer().writeAll(msg) catch {};
     while (true) {
@@ -80,7 +80,7 @@ pub fn panic(msg: []const u8, error_return_trace: ?*std.builtin.StackTrace, ret_
 }
 
 comptime {
-    if(@TypeOf(&_start) != entry.EntryType) {
+    if (@TypeOf(&_start) != entry.EntryType) {
         @compileError("_start of kernel doesn't have fitting type. See shared.entry.EntryType");
     }
 }

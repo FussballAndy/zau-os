@@ -2,11 +2,7 @@ const std = @import("std");
 const uefi = std.os.uefi;
 const GOP = uefi.protocol.GraphicsOutput;
 
-pub const Color = extern struct {
-    red: u8 = 0,
-    green: u8 = 0,
-    blue: u8 = 0
-};
+pub const Color = extern struct { red: u8 = 0, green: u8 = 0, blue: u8 = 0 };
 
 pub const GOPWrapper = extern struct {
     info: GOP.Mode.Info,
@@ -32,7 +28,7 @@ pub const GOPWrapper = extern struct {
                 result |= (@as(u32, pixel.green) << 8);
                 result |= (@as(u32, pixel.red) << 16);
             },
-            else => {}
+            else => {},
         }
         return result;
     }

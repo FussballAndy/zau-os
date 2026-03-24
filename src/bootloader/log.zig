@@ -3,10 +3,10 @@ const uefi = std.os.uefi;
 
 const W = std.unicode.utf8ToUtf16LeStringLiteral;
 
-const PrintError = error{InvalidUtf8,TooLongSlice};
+const PrintError = error{ InvalidUtf8, TooLongSlice };
 
 inline fn dynamicPuts(comptime out: []const u8, stream: ?*uefi.protocol.SimpleTextOutput) uefi.Error!void {
-    if(stream) |str| {
+    if (stream) |str| {
         _ = try str.outputString(W(out));
         return;
     }
@@ -18,7 +18,7 @@ pub fn puts(comptime out: []const u8) uefi.Error!void {
 }
 
 pub fn putsln(comptime out: []const u8) uefi.Error!void {
-    return puts(out++.{'\r','\n'});
+    return puts(out ++ .{ '\r', '\n' });
 }
 
 pub fn putsErr(comptime out: []const u8) void {
@@ -26,20 +26,20 @@ pub fn putsErr(comptime out: []const u8) void {
 }
 
 pub fn putslnErr(comptime out: []const u8) void {
-    _ = putsErr(out++.{'\r','\n'});
+    _ = putsErr(out ++ .{ '\r', '\n' });
 }
 
-const writer = std.io.GenericWriter(void, error{}, writerCallback){.context = {}};
+const writer = std.io.GenericWriter(void, error{}, writerCallback){ .context = {} };
 
 fn writerCallback(_: void, out: []const u8) error{}!usize {
-    var buffer: [513] u16 = std.mem.zeroes([513] u16);
+    var buffer: [513]u16 = std.mem.zeroes([513]u16);
     var dest_index: usize = 0;
     var actual_dest_index: usize = 0;
     const view = std.unicode.Utf8View.initUnchecked(out); // we rely on ourselves here, however i do not want to mix zig errors with uefi status returns.
     var it = view.iterator();
     while (it.nextCodepoint()) |codepoint| {
         if (codepoint < 0x10000) {
-            if(dest_index >= 512) {
+            if (dest_index >= 512) {
                 buffer[dest_index] = 0;
                 // ptrCast SAFETY: buffer of 513 elements to 512 + 0 sentinel
                 _ = uefi.system_table.con_out.?.outputString(@ptrCast(&buffer)) catch {};
@@ -49,7 +49,7 @@ fn writerCallback(_: void, out: []const u8) error{}!usize {
             buffer[dest_index] = std.mem.nativeToLittle(u16, @intCast(codepoint));
             dest_index += 1;
         } else {
-            if(dest_index >= 511) {
+            if (dest_index >= 511) {
                 buffer[dest_index] = 0;
                 // we might pass a slice here with length 511 (thus still having one free usable slot). however
                 // we do not need to pass a subslice as uefi terminates once it encounters a null-terminator
@@ -65,7 +65,7 @@ fn writerCallback(_: void, out: []const u8) error{}!usize {
             dest_index += 2;
         }
     }
-    if(dest_index != 0) {
+    if (dest_index != 0) {
         buffer[dest_index] = 0;
         // ptrCast SAFETY: buffer of dest_index elements to 512 + 0 sentinel (although actual 0 sentinel already at dest_index)
         _ = uefi.system_table.con_out.?.outputString(@ptrCast(&buffer)) catch {};

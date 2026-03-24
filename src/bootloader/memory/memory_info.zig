@@ -2,10 +2,7 @@ const std = @import("std");
 const uefi = std.os.uefi;
 const MemoryDescriptor = uefi.tables.MemoryDescriptor;
 
-const MemoryInfo = @import("./structs.zig").MemoryInfo;
-
 const log = @import("../log.zig");
-
 
 pub fn getMemoryInfo(boot: *uefi.tables.BootServices, allocator: std.mem.Allocator) uefi.Error!uefi.tables.MemoryMapSlice {
     const mmap_info = boot.getMemoryMapInfo() catch |err| {

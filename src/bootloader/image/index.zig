@@ -12,19 +12,19 @@ const log = @import("../log.zig");
 const constants = @import("../consts.zig");
 
 pub fn loadKernelFromDisk(boot: *uefi.tables.BootServices) uefi.Error!loader.KernelData {
-    const image = boot.openProtocol(uefi.protocol.LoadedImage, uefi.handle, .{ .by_handle_protocol = .{.agent = uefi.handle} }) catch |err| {
+    const image = boot.openProtocol(uefi.protocol.LoadedImage, uefi.handle, .{ .by_handle_protocol = .{ .agent = uefi.handle } }) catch |err| {
         log.putslnErr("Failed to open loaded image protocol!");
         return err;
     };
-    
-    if(image == null) {
+
+    if (image == null) {
         log.putslnErr("Image somehow is null.");
         return uefi.Error.Aborted;
     }
 
     const root_device = image.?.device_handle orelse return uefi.Error.Aborted;
 
-    const rootfs_raw = boot.openProtocol(uefi.protocol.SimpleFileSystem, root_device, .{ .by_handle_protocol = .{.agent = uefi.handle} }) catch |err| {
+    const rootfs_raw = boot.openProtocol(uefi.protocol.SimpleFileSystem, root_device, .{ .by_handle_protocol = .{ .agent = uefi.handle } }) catch |err| {
         log.putslnErr("Failed to get root volume");
         return err;
     };
@@ -36,15 +36,13 @@ pub fn loadKernelFromDisk(boot: *uefi.tables.BootServices) uefi.Error!loader.Ker
     };
 
     const kernel_result = loader.loadKernel(boot, rootdir);
-    
-    boot.closeProtocol(root_device, uefi.protocol.SimpleFileSystem, uefi.handle, null)
-    catch |err| {
+
+    boot.closeProtocol(root_device, uefi.protocol.SimpleFileSystem, uefi.handle, null) catch |err| {
         log.putslnErr("Failed to close SimpleFS protocol.");
         return err;
     };
 
-    boot.closeProtocol(uefi.handle, uefi.protocol.LoadedImage, uefi.handle, null)
-    catch |err| {
+    boot.closeProtocol(uefi.handle, uefi.protocol.LoadedImage, uefi.handle, null) catch |err| {
         log.putslnErr("Failed to close LoadedImage protocol.");
         return err;
     };

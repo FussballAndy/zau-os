@@ -14,7 +14,6 @@ const elfAddon = @import("elf.zig");
 
 pub const entryMod = @import("shared").entry;
 
-
 pub const KernelData = struct {
     kernel_image: *uefi.protocol.File,
     kernel_image_entry: entryMod.EntryType,
@@ -44,25 +43,23 @@ pub fn loadKernel(boot: *uefi.tables.BootServices, rootdir: *const uefi.protocol
         log.putslnErr("Failed to read header");
         return uefi.Error.Aborted;
     };
-    
 
     var ph_it: elfAddon.ProgramHeaderIterator = .{ .elf_header = header, .file_reader = &kernel_reader };
 
     var image_start: usize = std.math.maxInt(usize);
     var image_end: usize = 0;
-    while(ph_it.next() catch return handlePHeaderError()) |next| {
-        if(next.p_type != std.elf.PT_LOAD) continue;
+    while (ph_it.next() catch return handlePHeaderError()) |next| {
+        if (next.p_type != std.elf.PT_LOAD) continue;
 
-        
         const alignment = @max(next.p_align, PAGE_SIZE);
 
         const hdr_begin = std.mem.alignBackward(u64, next.p_vaddr, alignment);
-        if(image_start > hdr_begin) {
+        if (image_start > hdr_begin) {
             image_start = hdr_begin;
         }
 
         const hdr_end = std.mem.alignForward(u64, next.p_vaddr + next.p_memsz, alignment);
-        if(image_end < hdr_end) {
+        if (image_end < hdr_end) {
             image_end = hdr_end;
         }
     }
@@ -80,12 +77,12 @@ pub fn loadKernel(boot: *uefi.tables.BootServices, rootdir: *const uefi.protocol
     ph_it.reset();
 
     while (ph_it.next() catch return handlePHeaderError()) |next| {
-        if(next.p_type != std.elf.PT_LOAD) continue;
+        if (next.p_type != std.elf.PT_LOAD) continue;
 
         const phdr_addr = next.p_vaddr - image_start;
         const phdr_addr_end = phdr_addr + next.p_filesz;
         const phdr_slice = image_addr[phdr_addr..phdr_addr_end];
-        
+
         kernel_image.setPosition(next.p_offset) catch return handleReaderError();
         _ = kernel_image.read(phdr_slice) catch return handleReaderError();
     }

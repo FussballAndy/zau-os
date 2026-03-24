@@ -7,10 +7,7 @@ file: *uefi.protocol.File,
 interface: Io.Reader,
 
 pub fn init(file: *uefi.protocol.File, buffer: []u8) Self {
-    return .{
-        .file = file,
-        .interface = initInterface(buffer)
-    };
+    return .{ .file = file, .interface = initInterface(buffer) };
 }
 
 pub fn initInterface(buffer: []u8) Io.Reader {

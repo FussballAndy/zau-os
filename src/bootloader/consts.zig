@@ -5,5 +5,4 @@ const uefi = std.os.uefi;
 const ProtocolAttributes = uefi.tables.OpenProtocolAttributes;
 const W = std.unicode.utf8ToUtf16LeStringLiteral;
 
-
 pub const KERNEL_PATH: [:0]const u16 = W("kernel");
