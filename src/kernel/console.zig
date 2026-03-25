@@ -1,4 +1,5 @@
 const std = @import("std");
+const Io = std.Io;
 
 const sharedModule = @import("shared");
 const GOPWrapper = sharedModule.graphics.GOPWrapper;
@@ -26,23 +27,41 @@ const WriterContext = struct {
     }
 };
 
-const WriterType = std.io.GenericWriter(*WriterContext, error{InvalidUtf8}, writerCallback);
-
 pub const Console = struct {
     context: WriterContext,
+    interface: Io.Writer,
 
-    pub fn new(gop_wrapper: *GOPWrapper) Console {
+    pub fn new(gop_wrapper: *GOPWrapper, buffer: []u8) Console {
         return .{
             .context = .{ .gop_wrapper = gop_wrapper },
+            .interface = initInterface(buffer),
         };
     }
 
-    pub fn writer(self: *Console) WriterType {
-        return .{ .context = &self.context };
+    fn initInterface(buffer: []u8) Io.Writer {
+        return .{
+            .vtable = &.{ .drain = drain },
+            .buffer = buffer,
+            .end = 0,
+        };
+    }
+
+    fn drain(w: *Io.Writer, data: []const []const u8, splat: usize) Io.Writer.Error!usize {
+        _ = splat;
+        const cons: *Console = @fieldParentPtr("interface", w);
+        const buffered = w.buffered();
+        if (buffered.len != 0) {
+            puts(&cons.context, buffered) catch return error.WriteFailed;
+            return w.consume(buffered.len);
+        } else {
+            puts(&cons.context, data[0]) catch return error.WriteFailed;
+            return data[0].len;
+        }
     }
 
     pub inline fn print(self: *Console, comptime format: []const u8, args: anytype) !void {
-        return self.writer().print(format, args);
+        try self.interface.print(format, args);
+        return self.interface.flush();
     }
 
     pub fn reset(self: *Console) void {

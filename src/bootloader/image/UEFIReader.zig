@@ -25,6 +25,7 @@ fn stream(r: *Io.Reader, w: *Io.Writer, limit: Io.Limit) Io.Reader.StreamError!u
     const uefi_reader: *Self = @fieldParentPtr("interface", r);
     const dest = limit.slice(try w.writableSliceGreedy(1));
     const n = uefi_reader.file.read(dest) catch return error.ReadFailed;
+    if (n == 0) return error.EndOfStream;
     w.advance(n);
     return n;
 }

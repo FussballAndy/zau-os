@@ -10,8 +10,6 @@ pub fn getMemoryInfo(boot: *uefi.tables.BootServices, allocator: std.mem.Allocat
         return err;
     };
 
-    log.print("prelim key: {}\r\n", .{@intFromEnum(mmap_info.key)});
-
     // we do not need to allocate more than mmap_size Elements, as the heap is already allocated thus the allocation
     // does not change the memory map
     const mmap_buffer = allocator.alignedAlloc(u8, std.mem.Alignment.fromByteUnits(@alignOf(MemoryDescriptor)), mmap_info.len * mmap_info.descriptor_size) catch {

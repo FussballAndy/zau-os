@@ -32,7 +32,7 @@ fn debug_print_mmap(mmap: *const uefi.tables.MemoryMapSlice) void {
 pub fn startKernel(boot: *uefi.tables.BootServices, allocator: std.mem.Allocator, data: *KernelData, gop_wrapper: *GOPWrapper) uefi.Error!void {
     var mmap = try memory.getMemoryInfo(boot, allocator);
 
-    log.print("key: {}\r\n", .{@intFromEnum(mmap.info.key)});
+    // log.print("key: {}\r\n", .{@intFromEnum(mmap.info.key)});
 
     // debug_print_mmap(&mmap);
 
@@ -42,11 +42,11 @@ pub fn startKernel(boot: *uefi.tables.BootServices, allocator: std.mem.Allocator
     const pointers_to_change = .{ &entry, &frame_buffer_address };
     const vmap_data = mapToVirtualMemory(&mmap, allocator, pointers_to_change) catch return uefi.Error.OutOfResources;
 
-    log.putslnErr("Setup memory map");
+    // log.putslnErr("Setup memory map");
 
     // debug_print_mmap(&vmap_data.vmap);
 
-    log.print("key: {}\r\n", .{@intFromEnum(mmap.info.key)});
+    // log.print("key: {}\r\n", .{@intFromEnum(mmap.info.key)});
     // if(true) return;
 
     boot.exitBootServices(uefi.handle, mmap.info.key) catch |err| {

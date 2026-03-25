@@ -29,9 +29,24 @@ pub fn putslnErr(comptime out: []const u8) void {
     _ = putsErr(out ++ .{ '\r', '\n' });
 }
 
-const writer = std.io.GenericWriter(void, error{}, writerCallback){ .context = {} };
+var writer_buffer = std.mem.zeroes([512]u8);
+var writer = std.Io.Writer{
+    .vtable = &.{ .drain = writerDrain },
+    .buffer = &writer_buffer,
+    .end = 0,
+};
 
-fn writerCallback(_: void, out: []const u8) error{}!usize {
+fn writerDrain(w: *std.Io.Writer, data: []const []const u8, splat: usize) std.Io.Writer.Error!usize {
+    _ = splat;
+    const buffered = w.buffered();
+    if (buffered.len != 0) {
+        return w.consume(writerCallback(buffered));
+    } else {
+        return writerCallback(data[0]);
+    }
+}
+
+fn writerCallback(out: []const u8) usize {
     var buffer: [513]u16 = std.mem.zeroes([513]u16);
     var dest_index: usize = 0;
     var actual_dest_index: usize = 0;
@@ -75,5 +90,6 @@ fn writerCallback(_: void, out: []const u8) error{}!usize {
 }
 
 pub fn print(comptime out: []const u8, args: anytype) void {
-    std.fmt.format(writer, out, args) catch unreachable;
+    writer.print(out, args) catch {};
+    writer.flush() catch {};
 }

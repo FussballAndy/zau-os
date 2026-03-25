@@ -31,7 +31,12 @@ export fn _start(sys_table: *SystemTable, memory_regions: memory.MemoryRegions, 
 
     paintScreen(gop_wrapper, .{});
 
-    var screenWriter = Console.new(gop_wrapper);
+    const console_buffer = arena.allocator().alloc(u8, 16) catch {
+        paintScreen(gop_wrapper, .{ .green = 255 });
+        while (true) {}
+    };
+
+    var screenWriter = Console.new(gop_wrapper, console_buffer);
 
     screenWriter.print("Welcome from the kernel!\n", .{}) catch paintScreen(gop_wrapper, .{ .red = 255 });
 
@@ -72,8 +77,9 @@ pub fn panic(msg: []const u8, error_return_trace: ?*std.builtin.StackTrace, ret_
     _ = error_return_trace;
     _ = ret_addr;
     paintScreen(global_gop, .{ .blue = 255, .green = 255 });
-    var errorWriter = Console.new(global_gop);
-    errorWriter.writer().writeAll(msg) catch {};
+    var buffer = std.mem.zeroes([128]u8);
+    var errorWriter = Console.new(global_gop, &buffer);
+    errorWriter.interface.writeAll(msg) catch {};
     while (true) {
         @breakpoint();
     }
