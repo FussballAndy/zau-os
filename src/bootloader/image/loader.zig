@@ -1,8 +1,6 @@
 const std = @import("std");
 const uefi = std.os.uefi;
 
-const Status = uefi.Status;
-
 const constants = @import("../consts.zig");
 const KERNEL_PATH = constants.KERNEL_PATH;
 const PAGE_SIZE = 4096;

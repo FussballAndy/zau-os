@@ -15,12 +15,25 @@ const exceptions = @import("./exception.zig");
 pub var global_allocator: Allocator = undefined;
 var global_gop: *GOPWrapper = undefined;
 
-export fn _start(sys_table: *SystemTable, memory_regions: memory.MemoryRegions, gop_wrapper: *GOPWrapper) callconv(.c) noreturn {
+export fn _start(sys_table: *SystemTable, smap_ptr: [*]memory.SimpleDescriptor, smap_len: usize, gop_wrapper: *GOPWrapper) callconv(.c) noreturn {
     _ = sys_table;
     global_gop = gop_wrapper;
 
-    const buffer_ptr: [*]u8 = @ptrFromInt(memory_regions.usable_memory_start);
-    const buffer_len = memory_regions.usable_memory_end - memory_regions.usable_memory_start;
+    const smap = smap_ptr[0..smap_len];
+
+    var smap_entry: memory.SimpleDescriptor = std.mem.zeroes(memory.SimpleDescriptor);
+
+    for (smap) |desc| {
+        if(desc.usable) {
+            smap_entry = desc;
+            break;
+        }
+    }
+
+    std.debug.assert(smap_entry.usable);
+
+    const buffer_ptr: [*]u8 = @ptrFromInt(smap_entry.start);
+    const buffer_len = smap_entry.pages * 4096;
     const buffer = buffer_ptr[0..buffer_len];
     var fba = FixedBufferAllocator.init(buffer);
     const fba_allocator = fba.allocator();
@@ -31,12 +44,7 @@ export fn _start(sys_table: *SystemTable, memory_regions: memory.MemoryRegions, 
 
     paintScreen(gop_wrapper, .{});
 
-    const console_buffer = arena.allocator().alloc(u8, 16) catch {
-        paintScreen(gop_wrapper, .{ .green = 255 });
-        while (true) {}
-    };
-
-    var screenWriter = Console.new(gop_wrapper, console_buffer);
+    var screenWriter = Console.new(gop_wrapper, &[0]u8{});
 
     screenWriter.print("Welcome from the kernel!\n", .{}) catch paintScreen(gop_wrapper, .{ .red = 255 });
 
@@ -77,8 +85,7 @@ pub fn panic(msg: []const u8, error_return_trace: ?*std.builtin.StackTrace, ret_
     _ = error_return_trace;
     _ = ret_addr;
     paintScreen(global_gop, .{ .blue = 255, .green = 255 });
-    var buffer = std.mem.zeroes([128]u8);
-    var errorWriter = Console.new(global_gop, &buffer);
+    var errorWriter = Console.new(global_gop, &[0]u8{});
     errorWriter.interface.writeAll(msg) catch {};
     while (true) {
         @breakpoint();

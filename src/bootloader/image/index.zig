@@ -5,7 +5,6 @@ const uefi = std.os.uefi;
 const Status = uefi.Status;
 
 const loader = @import("./loader.zig");
-const Result = loader.Result;
 
 const log = @import("../log.zig");
 

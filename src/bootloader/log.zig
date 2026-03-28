@@ -29,10 +29,9 @@ pub fn putslnErr(comptime out: []const u8) void {
     _ = putsErr(out ++ .{ '\r', '\n' });
 }
 
-var writer_buffer = std.mem.zeroes([512]u8);
 var writer = std.Io.Writer{
     .vtable = &.{ .drain = writerDrain },
-    .buffer = &writer_buffer,
+    .buffer = &[0]u8{},
     .end = 0,
 };
 
