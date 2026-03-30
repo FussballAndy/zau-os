@@ -6,12 +6,14 @@ pub fn build(b: *std.Build) void {
         .cpu_arch = .aarch64,
         .os_tag = .uefi,
         .abi = .none,
+        .ofmt = .coff,
     };
 
     const target_query_kernel = std.Target.Query{
         .cpu_arch = .aarch64,
         .os_tag = .freestanding,
         .abi = .none,
+        .ofmt = .elf,
     };
 
     const target_bl = b.resolveTargetQuery(target_query_bootloader);
@@ -58,6 +60,7 @@ pub fn build(b: *std.Build) void {
         .name = "kernel",
         .root_module = kernel_module,
     });
+    kernel.image_base = 0xFFFF_FFFF_8000_0000;
     kernel.entry = .{ .symbol_name = "_start" };
     var kernel_install_step = b.addInstallArtifact(kernel, .{});
 

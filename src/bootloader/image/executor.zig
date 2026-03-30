@@ -27,6 +27,8 @@ pub fn startKernel(boot: *uefi.tables.BootServices, allocator: std.mem.Allocator
 
     const smap = try memory.buildSimpleMMap(&mmap, allocator);
 
+    // TODO: map kernel virtually
+
     boot.exitBootServices(uefi.handle, mmap.info.key) catch |err| {
         log.putslnErr("Failed to exit boot services");
         return err;

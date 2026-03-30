@@ -13,7 +13,7 @@ const elfAddon = @import("elf.zig");
 pub const entryMod = @import("shared").entry;
 
 pub const KernelData = struct {
-    kernel_image: *uefi.protocol.File,
+    virtual_start: usize,
     kernel_image_entry: entryMod.EntryType,
 };
 
@@ -27,7 +27,7 @@ fn handleReaderError() uefi.Error {
     return uefi.Error.Aborted;
 }
 
-pub fn loadKernel(boot: *uefi.tables.BootServices, rootdir: *const uefi.protocol.File) !KernelData {
+pub fn loadKernel(boot: *uefi.tables.BootServices, rootdir: *const uefi.protocol.File, alloc: std.mem.Allocator) uefi.Error!KernelData {
     const kernel_image = rootdir.open(KERNEL_PATH, .read, .{ .read_only = true }) catch |err| {
         log.putslnErr("Failed to open kernel image file.");
         return err;
@@ -42,11 +42,18 @@ pub fn loadKernel(boot: *uefi.tables.BootServices, rootdir: *const uefi.protocol
         return uefi.Error.Aborted;
     };
 
+    const p_headers = alloc.alloc(std.elf.Elf64_Phdr, header.phnum) catch return uefi.Error.OutOfResources;
+
     var ph_it: elfAddon.ProgramHeaderIterator = .{ .elf_header = header, .file_reader = &kernel_reader };
+    var i: usize = 0;
+    while (ph_it.next() catch return handlePHeaderError()) |next| {
+        p_headers[i] = next;
+        i += 1;
+    }
 
     var image_start: usize = std.math.maxInt(usize);
     var image_end: usize = 0;
-    while (ph_it.next() catch return handlePHeaderError()) |next| {
+    for (p_headers) |next| {
         if (next.p_type != std.elf.PT_LOAD) continue;
 
         const alignment = @max(next.p_align, PAGE_SIZE);
@@ -68,13 +75,11 @@ pub fn loadKernel(boot: *uefi.tables.BootServices, rootdir: *const uefi.protocol
         log.putslnErr("Failed to allocate page for kernel image.");
         return err;
     };
-    const image_addr: []u8 = @ptrCast(image_addr_raw);
+    var image_addr: []u8 = @ptrCast(image_addr_raw);
 
     @memset(image_addr[0..image_size], 0);
 
-    ph_it.reset();
-
-    while (ph_it.next() catch return handlePHeaderError()) |next| {
+    for (p_headers) |next| {
         if (next.p_type != std.elf.PT_LOAD) continue;
 
         const phdr_addr = next.p_vaddr - image_start;
@@ -85,6 +90,8 @@ pub fn loadKernel(boot: *uefi.tables.BootServices, rootdir: *const uefi.protocol
         _ = kernel_image.read(phdr_slice) catch return handleReaderError();
     }
 
+    try kernel_image.close();
+
     // Note that here, just like in other places we subtract image_start which is because we load the parts of the
     // kernel into memory at their respective location minus image_start to not waste memory before the first actual content.
     // SAFETY: we calculate the entry point from the image address and the entry pointer in the header
@@ -92,7 +99,7 @@ pub fn loadKernel(boot: *uefi.tables.BootServices, rootdir: *const uefi.protocol
     const kernel_image_entry: entryMod.EntryType = @ptrFromInt(kernel_image_entry_raw);
 
     return KernelData{
-        .kernel_image = kernel_image,
+        .virtual_start = image_start,
         .kernel_image_entry = kernel_image_entry,
     };
 }

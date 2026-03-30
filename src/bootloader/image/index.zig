@@ -10,7 +10,7 @@ const log = @import("../log.zig");
 
 const constants = @import("../consts.zig");
 
-pub fn loadKernelFromDisk(boot: *uefi.tables.BootServices) uefi.Error!loader.KernelData {
+pub fn loadKernelFromDisk(boot: *uefi.tables.BootServices, alloc: std.mem.Allocator) uefi.Error!loader.KernelData {
     const image = boot.openProtocol(uefi.protocol.LoadedImage, uefi.handle, .{ .by_handle_protocol = .{ .agent = uefi.handle } }) catch |err| {
         log.putslnErr("Failed to open loaded image protocol!");
         return err;
@@ -34,7 +34,7 @@ pub fn loadKernelFromDisk(boot: *uefi.tables.BootServices) uefi.Error!loader.Ker
         return err;
     };
 
-    const kernel_result = loader.loadKernel(boot, rootdir);
+    const kernel_result = loader.loadKernel(boot, rootdir, alloc);
 
     boot.closeProtocol(root_device, uefi.protocol.SimpleFileSystem, uefi.handle, null) catch |err| {
         log.putslnErr("Failed to close SimpleFS protocol.");

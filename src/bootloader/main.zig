@@ -31,7 +31,7 @@ fn inner_main() uefi.Error!void {
 
     log.putslnErr("Loading file handles.");
 
-    var kernel_data = try loader.loadKernelFromDisk(boot);
+    var kernel_data = try loader.loadKernelFromDisk(boot, allocator);
 
     log.putslnErr("Success.");
     log.putslnErr("Loading and setting up GOP.");
