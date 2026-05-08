@@ -13,6 +13,7 @@ const elfAddon = @import("elf.zig");
 pub const entryMod = @import("shared").entry;
 
 pub const KernelData = struct {
+    physical_start: usize,
     virtual_start: usize,
     kernel_image_entry: entryMod.EntryType,
 };
@@ -71,13 +72,19 @@ pub fn loadKernel(boot: *uefi.tables.BootServices, rootdir: *const uefi.protocol
 
     const image_size = image_end - image_start;
 
-    const image_addr_raw = boot.allocatePages(.any, .loader_data, (image_size + PAGE_SIZE - 1) / PAGE_SIZE) catch |err| {
+    const kernel_alignment = 1 << 21; // allign kernel on 2MB basis (for vmapping)
+    const image_pages = (image_size + kernel_alignment + PAGE_SIZE - 1) / PAGE_SIZE;
+
+    const image_addr_alloc = boot.allocatePages(.any, .vendor_start, image_pages) catch |err| {
         log.putslnErr("Failed to allocate page for kernel image.");
         return err;
     };
-    var image_addr: []u8 = @ptrCast(image_addr_raw);
+    const image_addr_raw = @intFromPtr(image_addr_alloc.ptr);
+    const image_addr_aligned = std.mem.alignForward(usize, image_addr_raw, kernel_alignment);
+    var image_addr_ptr: [*]u8 = @ptrFromInt(image_addr_aligned);
+    var image_addr = image_addr_ptr[0..image_size];
 
-    @memset(image_addr[0..image_size], 0);
+    @memset(image_addr, 0);
 
     for (p_headers) |next| {
         if (next.p_type != std.elf.PT_LOAD) continue;
@@ -92,14 +99,9 @@ pub fn loadKernel(boot: *uefi.tables.BootServices, rootdir: *const uefi.protocol
 
     try kernel_image.close();
 
-    // Note that here, just like in other places we subtract image_start which is because we load the parts of the
-    // kernel into memory at their respective location minus image_start to not waste memory before the first actual content.
-    // SAFETY: we calculate the entry point from the image address and the entry pointer in the header
-    const kernel_image_entry_raw = @intFromPtr(image_addr.ptr) + header.entry - image_start;
-    const kernel_image_entry: entryMod.EntryType = @ptrFromInt(kernel_image_entry_raw);
-
     return KernelData{
+        .physical_start = image_addr_aligned,
         .virtual_start = image_start,
-        .kernel_image_entry = kernel_image_entry,
+        .kernel_image_entry = @ptrFromInt(header.entry),
     };
 }

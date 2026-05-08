@@ -60,7 +60,7 @@ pub fn build(b: *std.Build) void {
         .name = "kernel",
         .root_module = kernel_module,
     });
-    kernel.image_base = 0xFFFF_FFFF_8000_0000;
+    kernel.image_base = 0xFFFF_FFFF_C000_0000; // As binary: "1"*34 + "0"*30, relevant for vmapping kernel into high space
     kernel.entry = .{ .symbol_name = "_start" };
     var kernel_install_step = b.addInstallArtifact(kernel, .{});
 
